@@ -1,20 +1,20 @@
 # Atlas Global
 
-Plataforma pública e gratuita para explorar dados internacionais. **Fase 1 — Fundação**: infraestrutura, backend e interface inicial. Ainda não existem integrações externas, indicadores, entidades de domínio ou endpoints de negócio. Não há contas nem autenticação.
+An open-source, free, publicly accessible platform for exploring international data. **Phase 1 — Foundation** provides the infrastructure, backend, and initial interface. External integrations, indicators, domain entities, and business endpoints have not been implemented yet. There are no accounts or authentication.
 
-## Requisitos
+## Requirements
 
-- Docker Engine com Docker Compose v2 para executar os contêineres.
-- Para desenvolvimento fora dos contêineres: JDK 21, Maven 3.9+, Node.js 22.12+ da linha 22 e npm.
-- Portas locais padrão: 3000 (interface Docker), 5173 (Vite), 8080 (backend), 8081 (health local), 5432 (PostgreSQL).
+- Docker Engine with Docker Compose v2 to run the containers.
+- For development outside containers: JDK 21, Maven 3.9+, Node.js 22.12+ from the 22.x release line, and npm.
+- Default local ports: 3000 (Docker interface), 5173 (Vite), 8080 (backend), 8081 (local health checks), and 5432 (PostgreSQL).
 
-## Executar tudo com Docker Compose
+## Run everything with Docker Compose
 
 ```bash
 cp .env.example .env
 ```
 
-Edite `.env` e preencha `DB_PASSWORD` com uma senha local. O Compose recusa senha vazia. Não versione esse arquivo.
+Edit `.env` and set `DB_PASSWORD` to a local password. Compose rejects an empty password. Do not commit this file.
 
 ```bash
 docker compose config --quiet
@@ -23,39 +23,39 @@ docker compose ps
 docker compose logs backend
 ```
 
-Acesse **http://localhost:3000**. A interface tem início, página sobre o projeto e alternância de tema. A aplicação não apresenta números ou consultas simuladas.
+Open **http://localhost:3000**. The interface includes a home page, an about page, and a theme toggle. The application does not display simulated figures or queries.
 
-A porta de gerenciamento 8081 não é publicada pelo Compose. Para verificar o backend e o banco a partir do próprio contêiner:
+Management port 8081 is not published by Compose. To check the backend and database from inside the container:
 
 ```bash
 docker compose exec backend wget -qO- http://127.0.0.1:8081/actuator/health/readiness
 ```
 
-A resposta esperada é `{"status":"UP"}`. O grupo readiness inclui a conexão com o banco. A inicialização do backend falha se o Flyway não conseguir aplicar/validar as migrações.
+The expected response is `{"status":"UP"}`. The readiness group includes database connectivity. Backend startup fails if Flyway cannot apply or validate migrations.
 
-Verifique a migração diretamente no banco:
+Check the migration directly in the database:
 
 ```bash
 docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT version, description, success FROM flyway_schema_history;"'
 ```
 
-Deve existir a versão `1` com `success = true`. A migração inicial não cria tabelas de domínio. O Flyway cria sua própria tabela de histórico.
+Version `1` should exist with `success = true`. The initial migration does not create domain tables. Flyway creates its own schema history table.
 
 ```bash
 docker compose down
 ```
 
-Esse comando preserva o volume. Não use `down -v` se quiser manter o banco. Alterar a senha em `.env` não altera a senha de um banco já inicializado: nesse caso, faça a alteração operacional no PostgreSQL.
+This command preserves the volume. Do not use `down -v` if you want to keep the database. Changing the password in `.env` does not change the password of an already initialized database; update it directly in PostgreSQL instead.
 
-## Desenvolvimento local
+## Local development
 
-Prepare `.env` conforme a seção anterior e suba somente o banco:
+Prepare `.env` as described above and start only the database:
 
 ```bash
 docker compose up -d postgres
 ```
 
-Em um terminal Bash na raiz do projeto, exporte a configuração local. O arquivo é carregado pelo shell; utilize apenas o `.env` local que você mesmo preparou.
+In a Bash terminal at the project root, export the local configuration. The shell executes the file, so only source the local `.env` you prepared yourself.
 
 ```bash
 set -a
@@ -65,9 +65,9 @@ export DB_URL="jdbc:postgresql://127.0.0.1:${DB_PORT:-5432}/${DB_NAME:-atlas_glo
 mvn -f backend/pom.xml spring-boot:run
 ```
 
-Confirme que `java -version` e `mvn -version` apontam para Java 21. Se necessário, ajuste `JAVA_HOME`.
+Make sure `java -version` and `mvn -version` point to Java 21. Adjust `JAVA_HOME` if necessary.
 
-Em outro terminal:
+In another terminal:
 
 ```bash
 cd frontend
@@ -75,34 +75,34 @@ npm ci
 npm run dev
 ```
 
-Acesse **http://localhost:5173**. O Vite encaminha `/api` para o backend local; nesta fase não há endpoints de negócio. O frontend não precisa de senha ou variáveis sensíveis.
+Open **http://localhost:5173**. Vite forwards `/api` to the local backend; this phase does not include business endpoints. The frontend does not require passwords or sensitive environment variables.
 
-Verificação operacional local:
+Local operational check:
 
 ```bash
 curl --fail http://127.0.0.1:8081/actuator/health/readiness
 ```
 
-`http://localhost:8080/actuator/health` deve responder **404**: o gerenciamento usa outra porta. No gerenciamento, somente `health` está exposto; `env`, `beans` e demais endpoints não são publicados.
+`http://localhost:8080/actuator/health` should return **404** because management runs on a separate port. Only `health` is exposed on the management port; `env`, `beans`, and other endpoints are not published.
 
-## Compilação e testes
+## Build and tests
 
-Testes unitários e compilação do backend, sem banco:
+Run backend unit tests and build without a database:
 
 ```bash
 mvn -f backend/pom.xml verify
 ```
 
-Testes de integração contra **um banco de teste dedicado e vazio**, com PostgreSQL em execução:
+Run integration tests against **a dedicated, empty test database**, with PostgreSQL running:
 
 ```bash
 export DB_URL=jdbc:postgresql://127.0.0.1:5432/atlas_test
 export DB_USERNAME=atlas
-export DB_PASSWORD='sua-senha-local'
+export DB_PASSWORD='your-local-password'
 mvn -f backend/pom.xml -Pintegration verify
 ```
 
-Crie `atlas_test` previamente com o proprietário correspondente. O perfil aplica a migração V1 nesse banco e verifica a conexão, a ausência de tabelas de domínio e o isolamento do Actuator. Ele não apaga tabelas nem limpa o banco. Reutilizar um banco contendo outras tabelas fará o teste de esquema falhar intencionalmente.
+Create `atlas_test` beforehand with the corresponding owner. This profile applies migration V1 and verifies connectivity, the absence of domain tables, and Actuator isolation. It does not delete tables or clean the database. Reusing a database containing other tables will intentionally cause the schema test to fail.
 
 Frontend:
 
@@ -113,30 +113,30 @@ npm run typecheck
 npm run build
 ```
 
-`package-lock.json` fixa as versões resolvidas; utilize `npm ci` para reproduzir a instalação. Os componentes shadcn/ui ficam no código-fonte (`components/ui`), com aliases e tema configurados em `components.json`.
+`package-lock.json` pins resolved versions; use `npm ci` to reproduce the installation. The shadcn/ui components live in the source tree (`components/ui`), with aliases and theme settings in `components.json`.
 
-## Configuração
+## Configuration
 
-| Variável | Uso |
+| Variable | Purpose |
 | --- | --- |
-| `DB_PASSWORD` | Obrigatória no backend e no Compose; nunca versionada. |
-| `DB_USERNAME` | Usuário do banco; padrão `atlas`. |
-| `DB_NAME`, `DB_PORT` | Banco e porta publicados pelo Compose. |
-| `DB_URL` | URL JDBC do backend local; no Compose utiliza o serviço `postgres`. |
-| `BACKEND_PORT`, `FRONTEND_PORT` | Portas publicadas pelo Compose. |
-| `SERVER_PORT` | Porta HTTP do processo Java fora do Compose; padrão 8080. |
-| `CORS_ALLOWED_ORIGINS` | Lista de origens exatas separadas por vírgula; sem curingas. |
-| `MANAGEMENT_PORT`, `MANAGEMENT_ADDRESS` | Gerenciamento operacional; padrão 8081 e 127.0.0.1. Mantenha restrito. |
+| `DB_PASSWORD` | Required by the backend and Compose; never committed. |
+| `DB_USERNAME` | Database username; defaults to `atlas`. |
+| `DB_NAME`, `DB_PORT` | Database name and database port published by Compose. |
+| `DB_URL` | JDBC URL for the local backend; Compose uses the `postgres` service. |
+| `BACKEND_PORT`, `FRONTEND_PORT` | Ports published by Compose. |
+| `SERVER_PORT` | HTTP port for the Java process outside Compose; defaults to 8080. |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated list of exact origins; no wildcards. |
+| `MANAGEMENT_PORT`, `MANAGEMENT_ADDRESS` | Operational management; defaults to 8081 and 127.0.0.1. Keep access restricted. |
 
-O Compose publica portas apenas em `127.0.0.1`. Esta é uma configuração de desenvolvimento local, não uma implantação de produção. O usuário PostgreSQL criado pela imagem é operacional; a separação de papéis de banco para produção será definida na etapa de implantação.
+Compose binds published ports to `127.0.0.1` only. This configuration is for local development, not production deployment. The PostgreSQL user created by the image is an operational account; separate database roles for production will be defined during the deployment phase.
 
-## Estrutura
+## Project structure
 
 ```text
-backend/         Spring Boot, configurações, migração e testes
-frontend/        React, Vite, Tailwind e componentes shadcn/ui
-infrastructure/  Orientações da infraestrutura local
-docs/           Decisões de arquitetura e validação
+backend/         Spring Boot, configuration, migration, and tests
+frontend/        React, Vite, Tailwind, and shadcn/ui components
+infrastructure/  Local infrastructure guidance
+docs/            Architecture decisions and validation
 ```
 
-Consulte [a arquitetura inicial](docs/architecture/foundation.md) e [as verificações da fase](docs/validation.md). Nenhum push ou deploy faz parte desta entrega.
+See the [initial architecture](docs/architecture/foundation.md) and [phase validation results](docs/validation.md). No push or deployment is included in this delivery.
