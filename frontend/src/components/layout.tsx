@@ -1,4 +1,4 @@
-import { ArrowUpRight, Globe2, Moon, Sun } from 'lucide-react'
+import { ArrowUpRight, Github, Globe2, Moon, Sun } from 'lucide-react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useTheme } from '@/hooks/use-theme'
@@ -27,7 +27,10 @@ export function Layout() {
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-7xl flex-wrap justify-between gap-5 px-6 py-5 text-xs text-muted-foreground lg:px-10">
           <p>Atlas Global · Conhecimento público, acesso livre.</p>
-          <a href="https://data.worldbank.org/" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 hover:text-foreground">Conheça o World Bank Data <ArrowUpRight size={15} /></a>
+          <div className="flex flex-wrap items-center gap-5">
+            <a href="https://github.com/lngabriel/atlasglobal" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 hover:text-foreground"><Github size={15} aria-hidden="true" />Código no GitHub<ArrowUpRight size={15} aria-hidden="true" /></a>
+            <a href="https://data.worldbank.org/" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 hover:text-foreground">Conheça o World Bank Data <ArrowUpRight size={15} /></a>
+          </div>
         </div>
       </footer>
     </div>

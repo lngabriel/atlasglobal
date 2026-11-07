@@ -1,5 +1,7 @@
 # Atlas Global
 
+[Source code on GitHub](https://github.com/lngabriel/atlasglobal)
+
 An open-source, free, publicly accessible platform for exploring international data. **Phase 1 — Foundation** provides the infrastructure, backend, and initial interface. External integrations, indicators, domain entities, and business endpoints have not been implemented yet. There are no accounts or authentication.
 
 ## Requirements
