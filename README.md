@@ -23,7 +23,7 @@ docker compose ps
 docker compose logs backend
 ```
 
-Open **http://localhost:3000**. The interface includes a home page, an about page, and a theme toggle. The application does not display simulated figures or queries.
+Open **http://localhost:3000**. The interface opens directly to a minimal indicator overview with an empty state until real data is imported. It also includes an about page and a theme toggle. The application does not display simulated figures or queries.
 
 Management port 8081 is not published by Compose. To check the backend and database from inside the container:
 

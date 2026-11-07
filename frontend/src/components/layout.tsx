@@ -6,12 +6,12 @@ import { useTheme } from '@/hooks/use-theme'
 export function Layout() {
   const { theme, toggleTheme } = useTheme()
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
       <a className="skip-link" href="#content">Pular para o conteúdo</a>
       <header className="border-b border-border">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-5 lg:px-10">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 py-3 lg:px-10">
           <Link to="/" className="flex items-center gap-3" aria-label="Atlas Global, início">
-            <span className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground"><Globe2 size={24} /></span>
+            <span className="grid size-9 place-items-center rounded-lg bg-primary text-primary-foreground"><Globe2 size={24} /></span>
             <span className="text-xl font-semibold tracking-tight">atlas<span className="font-normal text-muted-foreground"> global</span></span>
           </Link>
           <nav aria-label="Navegação principal" className="flex items-center gap-5 text-sm">
@@ -23,9 +23,9 @@ export function Layout() {
           </nav>
         </div>
       </header>
-      <main id="content"><Outlet /></main>
+      <main id="content" className="flex-1"><Outlet /></main>
       <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-7xl flex-wrap justify-between gap-5 px-6 py-7 text-sm text-muted-foreground lg:px-10">
+        <div className="mx-auto flex max-w-7xl flex-wrap justify-between gap-5 px-6 py-5 text-xs text-muted-foreground lg:px-10">
           <p>Atlas Global · Conhecimento público, acesso livre.</p>
           <a href="https://data.worldbank.org/" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 hover:text-foreground">Conheça o World Bank Data <ArrowUpRight size={15} /></a>
         </div>

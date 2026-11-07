@@ -33,7 +33,7 @@ Exceções MVC usam ProblemDetail; falhas inesperadas retornam mensagem genéric
 
 ## Interface
 
-Início e página sobre o projeto são as únicas rotas funcionais além do fallback 404. Sem pesquisa, indicadores, comparações ou gráficos antecipados. O globo é uma ilustração CSS decorativa, não um mapa de dados. Modo claro/escuro, layout responsivo, navegação por teclado e link para pular ao conteúdo compõem a fundação visual.
+Início e página sobre o projeto são as únicas rotas funcionais além do fallback 404. Sem pesquisa, indicadores, comparações ou gráficos antecipados. A página inicial abre diretamente na área de indicadores, com estado vazio explícito até a importação de dados reais, sem bloco promocional ou ilustração decorativa. Modo claro/escuro, layout responsivo, navegação por teclado e link para pular ao conteúdo compõem a fundação visual.
 
 shadcn/ui é configurado com Tailwind 4, variáveis CSS, aliases e componente Button local baseado em Radix Slot. Não existe serviço shadcn em runtime.
 

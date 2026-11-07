@@ -39,13 +39,3 @@ button, a { -webkit-tap-highlight-color: transparent; }
 a:focus-visible { outline: 2px solid var(--ring); outline-offset: 5px; }
 .skip-link { position: absolute; left: 1rem; top: -5rem; z-index: 50; padding: 1rem; background: var(--background); }
 .skip-link:focus { top: 1rem; }
-.globe-panel { position: relative; min-height: 370px; display: grid; place-items: center; overflow: hidden; border-radius: 24px; background: radial-gradient(ellipse at 50% 45%, #c8ddc2 0%, #e7eee0 50%, #eff3e9 100%); }
-.dark .globe-panel { background: radial-gradient(ellipse at 50% 45%, #2d5140, #1b3026 60%, #17271f); }
-.globe-sphere { width: 250px; height: 250px; position: relative; border-radius: 50%; border: 1px solid #42725a80; background: repeating-linear-gradient(0deg, transparent 0 39px, #42725a30 40px 41px); box-shadow: inset -25px -10px 50px #254d3520; transform: rotate(-18deg); }
-.globe-meridian { position: absolute; inset: 0 60px; border: 1px solid #42725a80; border-radius: 50%; }
-.globe-equator { position: absolute; inset: 90px -1px; border: 1px solid #42725a80; border-radius: 50%; }
-.globe-orbit { position: absolute; width: 340px; height: 150px; border: 1px solid #42725a40; border-radius: 50%; }
-.orbit-one { transform: rotate(-35deg); }
-.orbit-two { transform: rotate(45deg); }
-.globe-label { position: absolute; bottom: 25px; font-size: 9px; letter-spacing: .2em; color: var(--primary); }
-@media (max-width: 480px) { .globe-panel { min-height: 300px; } .globe-sphere { width: 210px; height: 210px; } }
