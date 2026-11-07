@@ -1,4 +1,2 @@
-/**
- * Domain boundary reserved by the approved architecture; no domain implementation in phase 1.
- */
+/** Indicator definitions and source-specific series. */
 package com.atlasglobal.indicator;

@@ -1,4 +1,2 @@
-/**
- * Domain boundary reserved by the approved architecture; no domain implementation in phase 1.
- */
+/** Country catalog and provider identifiers. */
 package com.atlasglobal.country;

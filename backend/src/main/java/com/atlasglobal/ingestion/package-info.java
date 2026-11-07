@@ -1,4 +1,2 @@
-/**
- * Domain boundary reserved by the approved architecture; no domain implementation in phase 1.
- */
+/** Internal data imports and operational history. */
 package com.atlasglobal.ingestion;

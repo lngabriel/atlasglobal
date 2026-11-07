@@ -1,4 +1,2 @@
-/**
- * Domain boundary reserved by the approved architecture; no domain implementation in phase 1.
- */
+/** Annual observations with explicit missing values. */
 package com.atlasglobal.observation;

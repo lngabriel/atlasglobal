@@ -19,13 +19,14 @@ class FoundationIT {
     @Value("${local.management.port}") private int managementPort;
 
     @Test
-    void connectsToPostgresAndAppliesFoundationMigration() {
+    void connectsToPostgresAndAppliesCatalogMigrations() {
         assertThat(jdbc.queryForObject("SELECT current_database()", String.class)).isNotBlank();
         assertThat(jdbc.queryForObject(
             "SELECT count(*) FROM flyway_schema_history WHERE version = '1' AND success", Integer.class))
             .isEqualTo(1);
         assertThat(jdbc.queryForList("SELECT tablename FROM pg_tables WHERE schemaname = 'public'", String.class))
-            .containsExactly("flyway_schema_history");
+            .contains("flyway_schema_history", "country", "indicator", "data_source",
+                "indicator_series", "indicator_observation", "data_import");
     }
 
     @Test
