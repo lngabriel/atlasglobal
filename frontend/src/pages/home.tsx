@@ -15,12 +15,12 @@ export function HomePage() {
         <div className="mt-7 rounded-xl border border-border">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
             <h2 className="text-sm font-medium">Visão geral</h2>
-            <span className="text-xs text-muted-foreground">Sem dados importados</span>
+            <span className="text-xs text-muted-foreground">Consulta indisponível</span>
           </div>
           <div className="flex flex-col items-center px-6 py-16 text-center sm:py-20">
             <Database size={24} strokeWidth={1.5} className="text-muted-foreground" aria-hidden="true" />
             <h3 className="mt-4 text-base font-medium">Os indicadores ainda não estão disponíveis</h3>
-            <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">Os dados aparecerão aqui após a integração com as fontes oficiais. Nenhum indicador foi importado nesta versão.</p>
+            <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">A visualização de dados ainda não está disponível nesta interface. Conheça as fontes e os princípios do Atlas Global na página do projeto.</p>
           </div>
         </div>
       </section>
