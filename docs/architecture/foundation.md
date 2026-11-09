@@ -1,48 +1,34 @@
-# Fundação — decisão arquitetural
+# Application architecture
 
-## Escopo
+Atlas Global uses a modular Spring Boot monolith and a separate React frontend. PostgreSQL stores the country catalog, indicator definitions, source-specific annual series, observations, and import history. No accounts, authentication, or user-related tables exist.
 
-Monólito modular Java 21 / Spring Boot 3.5.16 e frontend separado React 19 / TypeScript / Vite. PostgreSQL com Flyway. Nenhuma conta, autenticação, Spring Security, entidade de usuário ou integração externa.
+## Backend boundaries
 
-## Limites e dependências
+- `country`, `indicator`, `observation`, and `source` contain the domain mappings.
+- `ingestion` defines normalized provider records, transactional storage, import coordination, an operational command, and optional scheduling.
+- `integration/worldbank` owns HTTP configuration, provider-specific DTOs, pagination, retries, metadata validation, and conversion into internal records.
+- `shared` contains CORS configuration and safe MVC exception handling.
 
-- `AtlasGlobalApplication` inicializa o backend.
-- `shared` contém infraestrutura transversal: CORS e tratamento de exceções.
-- `country`, `indicator`, `observation` e `ingestion` têm somente documentação de pacote, sem entidades, serviços ou contratos fictícios.
-- As funcionalidades serão organizadas por domínio, com controllers, DTOs, serviços e repositórios próximos de suas regras quando forem implementados.
-- O frontend organiza navegação em `app`, páginas em `pages`, componentes em `components`, clientes em `services` e comportamento reutilizável em `hooks`.
-- TanStack Query está configurado sem consultas fictícias. Nenhum dado externo é requisitado pela aplicação.
+External response DTOs do not cross the provider boundary. JPA mappings are validated against the Flyway-managed schema. The importer uses parameterized PostgreSQL batch upserts for efficient and idempotent persistence.
 
-Apenas o tema é salvo em localStorage. A fonte tipográfica utiliza a pilha do sistema: não há dependência de serviços externos de fontes.
+Read the [data model](../data-model.md) for schema constraints and [World Bank adapter documentation](../integrations/world-bank.md) for provider behavior.
 
-## Banco e migrações
+## Runtime
 
-Flyway é responsável pelo esquema. `ddl-auto=validate` impede geração de tabelas por Hibernate. A migração V1 executa uma instrução SQL sem criar entidades: demonstra conectividade e inicializa o histórico. O modelo relacional será introduzido em migrações posteriores, após sua definição.
+Docker Compose runs PostgreSQL, the backend, and an unprivileged Nginx frontend. Database health gates backend startup. Nginx serves the static React build with SPA routing and forwards `/api` to the backend. Vite provides an equivalent proxy during local development.
 
-O volume do Compose preserva o PostgreSQL entre reinicializações. Credenciais são obrigatórias por variável de ambiente. PostgreSQL 17 é a versão de referência do Compose.
+Published Compose ports bind to localhost. Actuator uses a separate loopback interface and port with only health exposed; the port is not published or proxied. Readiness checks the database. CORS allows exact configured origins and read methods without browser credentials.
 
-## Superfície pública e operacional
+The import command runs internally and exits after completion. Scheduled imports are opt-in. PostgreSQL advisory locking prevents overlapping imports across instances. Normal application startup performs no upstream requests unless scheduling or the operational command is explicitly enabled.
 
-O backend não tem controllers de negócio nesta fase. Não existe rota de importação ou administração.
+## Frontend
 
-CORS permite apenas origens explícitas e métodos GET, HEAD e OPTIONS em `/api/**`, sem credenciais. CORS é uma política do navegador, não substitui a restrição de operações no servidor.
+React Router manages navigation. TanStack Query is configured for data fetching without placeholder queries. The UI uses Tailwind CSS and local shadcn/ui components with a monochrome light/dark palette. Only the display theme is stored in localStorage.
 
-Actuator funciona em porta separada, vinculada a 127.0.0.1 por padrão. Somente health está exposto, sem detalhes. Readiness inclui o banco; liveness não depende dele. O Compose não publica a porta de gerenciamento e o Nginx não a encaminha.
+The application currently presents an indicator workspace and source information. Imported data resides in PostgreSQL; the interface does not expose analytical queries. No synthetic figures are presented.
 
-Exceções MVC usam ProblemDetail; falhas inesperadas retornam mensagem genérica e são registradas internamente. Logs usam JSON ECS. O envio multipart está desabilitado.
+## Configuration and operations
 
-## Interface
+Database credentials are environment variables and never reach the browser. Import scope and scheduling are configured through environment variables or command arguments. No public administrative or import endpoints exist. Logs use structured JSON; persisted errors omit internal stack traces and provider payloads.
 
-Início e página sobre o projeto são as únicas rotas funcionais além do fallback 404. Sem pesquisa, indicadores, comparações ou gráficos antecipados. A página inicial abre diretamente na área de indicadores, com estado vazio explícito até a importação de dados reais, sem bloco promocional ou ilustração decorativa. Modo claro/escuro, layout responsivo, navegação por teclado e link para pular ao conteúdo compõem a fundação visual.
-
-shadcn/ui é configurado com Tailwind 4, variáveis CSS, aliases e componente Button local baseado em Radix Slot. Não existe serviço shadcn em runtime.
-
-## Execução
-
-No Compose, Nginx serve a aplicação estática e encaminha `/api` ao backend. Backend e frontend usam builds em múltiplas etapas e processos sem privilégios de root no runtime. PostgreSQL precisa estar saudável antes de iniciar o backend.
-
-No desenvolvimento, Vite encaminha `/api` ao backend local. Segredos não são transmitidos ao frontend. Arquivos `.env`, resultados de build e ferramentas locais são ignorados pelo Git.
-
-## Adiado deliberadamente
-
-Entidades e tabelas de domínio, integração World Bank, endpoints de consulta, OpenAPI, cache de dados, jobs, comparador, rankings, mapa, CSV, rate limiting de produção e CI/CD pertencem às próximas etapas. Nenhuma dessas funcionalidades é simulada nesta fase.
+The Compose configuration is intended for local development. Deployment-specific TLS, network policy, and database roles are operational concerns outside this configuration.

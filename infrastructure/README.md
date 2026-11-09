@@ -8,4 +8,4 @@ Os serviços são definidos no `docker-compose.yml` da raiz. Os contextos de bui
 - A porta Actuator não é publicada nem encaminhada pelo proxy.
 - Todas as portas publicadas estão vinculadas a 127.0.0.1.
 
-Consulte o README principal para variáveis e comandos. Os arquivos desta fase não configuram hospedagem pública nem TLS.
+Consulte o README principal para variáveis e comandos. A configuração local não inclui hospedagem pública nem TLS.

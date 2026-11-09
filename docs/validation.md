@@ -1,48 +1,37 @@
-# Validação da Fase 1
+# Validation results
 
-Verificações realizadas em 6 de novembro de 2026.
+Verified on 2026-11-06 using Java 21.0.13, Maven 3.9.12, PostgreSQL 17.11, Node.js 22.23.4, and Docker Engine 29.9.3.
 
-## Backend
-
-Ambiente: Eclipse Temurin JDK 21.0.13, Maven 3.9.12 e Spring Boot 3.5.16.
-
-Comando executado com `DB_URL`, `DB_USERNAME` e `DB_PASSWORD` direcionados a um banco temporário dedicado:
+## Automated backend checks
 
 ```bash
-mvn -B -f backend/pom.xml -Pintegration verify
+mvn -f backend/pom.xml -Pintegration verify
 ```
 
-Resultado: **BUILD SUCCESS**, cinco testes aprovados, sem falhas, erros ou testes ignorados.
+Result: **BUILD SUCCESS**, 22 tests passed (17 unit/contract tests and five PostgreSQL integration tests), without failures or skipped tests.
 
-- CORS rejeita origens com curinga.
-- Preflight permite a origem configurada e GET; rejeita origem desconhecida e POST.
-- Exceção inesperada retorna ProblemDetail genérico.
-- Conexão PostgreSQL funciona, Flyway V1 é aplicada e nenhuma tabela de domínio existe.
-- Readiness retorna UP sem detalhes; `/actuator/env` retorna 404 e health não existe na porta principal.
+Coverage includes explicit CORS policy, safe error responses, World Bank response decoding, country aggregate exclusion, metadata normalization, decimal precision, missing values versus zero, pagination completeness, transient and permanent HTTP failures, provider error envelopes, import configuration limits, Flyway migrations, JPA mappings, transactional upserts, historical retention, import history, concurrent import exclusion, and Actuator isolation.
 
-O PostgreSQL instalado no ambiente é 18.6. A migração e os testes passaram nessa versão, mas o Flyway gerenciado pelo Spring Boot emitiu aviso de suporte testado até PostgreSQL 17. O Compose utiliza PostgreSQL 17; sua execução continua pendente até haver Docker Engine disponível. Não foi alterada a versão do Compose para contornar o aviso do ambiente local.
+Tests use a dedicated database. Store integration tests run in transactions that roll back their writes.
 
-## Frontend
+## Live provider checks
 
-Ambiente: Node.js 22.23.4 e npm 10.9.9.
+The real World Bank API was queried before adapter implementation. A full historical import for the nine configured countries completed with:
 
-- `npm run typecheck`: aprovado.
-- `npm run build`: aprovado, com Vite 7.3.7.
-- `npm audit --omit=dev --audit-level=high`: nenhuma vulnerabilidade encontrada nas dependências de runtime.
-- Verificação no Chrome headless: início renderizado, navegação para sobre, gravação e persistência do tema após recarregar, ausência de rolagem horizontal em viewport de 390 px e fallback para rota desconhecida aprovados.
-- Capturas de desktop e celular inspecionadas localmente.
+- 217 nonaggregate country/economy catalog entries.
+- Eight indicator definitions and eight source-specific series.
+- 4,752 annual observations: 4,007 numeric values and 745 explicit missing values.
 
-As verificações de navegador foram realizadas com script operacional temporário, sem adicionar dependências ou uma suíte de testes de interface ao projeto.
+Repeating the full import left 4,752 unique country/series/year observations. A persisted Brazil GDP value was checked against the original provider response. See the [provider documentation](integrations/world-bank.md) for the snapshot and tested request shapes.
 
-## Infraestrutura
+## Frontend and containers
 
-- `docker compose config --quiet` com senha não vazia: aprovado pelo binário oficial Compose v5.7.0 em modo standalone.
-- Mesma validação com senha vazia: rejeitada como esperado.
-- Porta 8081 não publicada; portas públicas locais vinculadas a 127.0.0.1.
-- `.env` e ferramentas locais ignorados pelo Git.
+- TypeScript and Vite production build passed.
+- Backend and frontend Docker images built successfully.
+- All three services started through Compose using an isolated project and alternate localhost ports.
+- Backend readiness returned `{"status":"UP"}`.
+- Nginx served the SPA fallback at `/sobre`.
+- The documented internal import command completed inside Docker, importing 216 observations for 2022–2024.
+- An unavailable country produced exit code 1 and a FAILED import without deleting previously imported data.
 
-**Limitação:** Docker Engine não está instalado. Não foram executados `docker compose up`, builds de imagens ou verificações de Nginx dentro do contêiner. Execute o roteiro do README em um ambiente com Docker para concluir essa validação.
-
-## Escopo preservado
-
-Nenhuma integração com APIs externas, entidade de domínio, conta, autenticação ou operação administrativa pública foi implementada. Nenhum push ou deploy foi executado. A Fase 2 depende de aprovação explícita.
+The checks used isolated containers and databases; the user's existing database and local application services were not modified. These results describe the tested snapshot and do not guarantee permanent upstream availability or coverage.
