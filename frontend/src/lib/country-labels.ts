@@ -17,7 +17,3 @@ const incomes: Record<string, string> = {
 }
 export const regionLabel = (value: string | null) => value ? regions[value] ?? value : 'Região não informada'
 export const incomeLabel = (value: string | null) => value ? incomes[value] ?? value : 'Renda não informada'
-export function countryFlag(iso2Code: string): string {
-  return /^[A-Z]{2}$/.test(iso2Code.toUpperCase())
-    ? String.fromCodePoint(...[...iso2Code.toUpperCase()].map(letter => 127397 + letter.charCodeAt(0))) : ''
-}

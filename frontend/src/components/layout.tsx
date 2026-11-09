@@ -13,6 +13,7 @@ export function Layout() {
           <Link to="/" aria-label="Atlas Global, início" className="text-lg font-semibold tracking-tight sm:text-xl">atlas<span className="font-normal text-muted-foreground"> global</span><span className="ml-1 text-muted-foreground">.</span></Link>
           <nav aria-label="Navegação principal" className="flex items-center gap-3 text-xs sm:gap-7">
             <NavLink to="/" end className={({ isActive }) => isActive ? 'font-semibold' : 'text-muted-foreground hover:text-foreground'}>Explorar</NavLink>
+            <NavLink to="/comparar" className={({ isActive }) => isActive ? 'font-semibold' : 'text-muted-foreground hover:text-foreground'}>Comparar</NavLink>
             <NavLink to="/sobre" className={({ isActive }) => isActive ? 'font-semibold' : 'text-muted-foreground hover:text-foreground'}>O projeto</NavLink>
             <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}>
               {theme === 'dark' ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />}
@@ -27,6 +28,7 @@ export function Layout() {
           <div className="flex flex-wrap items-center gap-5">
             <a href="https://github.com/lngabriel/atlasglobal" target="_blank" rel="noreferrer" className="text-link inline-flex items-center gap-1">Código no GitHub<ArrowUpRight size={12} aria-hidden="true" /></a>
             <a href="https://data.worldbank.org/" target="_blank" rel="noreferrer" className="text-link inline-flex items-center gap-1">World Bank Data<ArrowUpRight size={12} aria-hidden="true" /></a>
+            <a href="https://data-explorer.oecd.org/" target="_blank" rel="noreferrer" className="text-link inline-flex items-center gap-1">OECD Data<ArrowUpRight size={12} aria-hidden="true" /></a>
           </div>
         </div>
       </footer>

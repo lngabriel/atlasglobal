@@ -5,7 +5,7 @@ import { useWorkspaceParams } from '@/hooks/use-workspace-params'
 import { useCountry, useCountryIndicators, useHistory } from '@/hooks/use-atlas-data'
 import { ErrorState, LoadingState } from '@/components/query-state'
 import { PeriodFilter, currentYear, queryYear } from '@/components/period-filter'
-import { countryFlag, incomeLabel, regionLabel } from '@/lib/country-labels'
+import { incomeLabel, regionLabel } from '@/lib/country-labels'
 import { categoryLabel, formatDate, formatValue, unitLabel } from '@/lib/format'
 import { annualChange } from '@/lib/history'
 import type { CountryIndicatorSummary } from '@/services/api'
@@ -54,7 +54,7 @@ export function CountryDashboard({ code, standalone = false }: { code: string; s
     (last, item) => !last || item.period > last.period ? item : last,
     null,
   )
-  const change = selected ? annualChange(observations, selected.series.unit) : null
+  const change = selected ? annualChange(observations, selected.series.unit, selected.indicator.code) : null
   const providerDate = observations.flatMap(item => item.sourceUpdatedAt ? [item.sourceUpdatedAt] : []).sort().at(-1) ?? null
   const collectedDate = observations.flatMap(item => item.importedAt ? [item.importedAt] : []).sort().at(-1) ?? null
 
@@ -89,7 +89,6 @@ export function CountryDashboard({ code, standalone = false }: { code: string; s
           Perfil do país <span className="mx-1.5" aria-hidden="true">/</span> {countryData.iso3Code}
         </p>
         <Heading className="editorial-title flex items-center gap-3 text-3xl sm:text-4xl">
-          <span className="font-sans text-2xl" aria-hidden="true">{countryFlag(countryData.iso2Code)}</span>
           {countryData.name}
         </Heading>
         <p className="mt-2 max-w-2xl text-xs leading-5 text-muted-foreground">
@@ -158,15 +157,21 @@ export function CountryDashboard({ code, standalone = false }: { code: string; s
               }}
             >
               {!selected && <option value="" disabled>Série indisponível</option>}
-              {items.map(item => <option key={item.series.id} value={item.series.id}>
+              {categories.map(group => <optgroup key={group} label={categoryLabel(group)}>{items.filter(item => item.indicator.category === group).map(item => <option key={item.series.id} value={item.series.id}>
                 {item.indicator.name} · {item.series.source.name}
                 {items.filter(other => other.indicator.code === item.indicator.code).length > 1
                   ? ` · ${item.series.externalCode} · ${item.series.datasetCode} (${unitLabel(item.series.unit)})`
                   : ''}
-              </option>)}
+              </option>)}</optgroup>)}
             </select>
           </label>
         </div>
+        {selected && <p className="mb-4 text-xs leading-6 text-muted-foreground">
+          {categoryLabel(selected.indicator.category)} · <Link
+            to={`/comparar?paises=${code === 'USA' ? 'USA,BRA' : `${code},USA`}&indicador=${encodeURIComponent(selected.indicator.code)}&serie=${selected.series.id}&de=${from}&ate=${to}`}
+            className="text-link"
+          >Comparar este indicador</Link>
+        </p>}
         {!selected ? <p role="status" className="py-8 text-sm text-muted-foreground">
           A série deste endereço não está disponível. Escolha um indicador acima.
         </p> : <>
@@ -218,6 +223,7 @@ export function CountryDashboard({ code, standalone = false }: { code: string; s
               <p lang="en">
                 {selected.series.methodology ?? selected.indicator.description ?? 'A fonte não informou uma definição para esta série.'}
               </p>
+              {selected.series.comparison && <p>{selected.series.comparison.note}</p>}
               {selected.series.sourceOrganization && <p>
                 <span className="font-medium text-foreground">Organização de origem</span>
                 <br />

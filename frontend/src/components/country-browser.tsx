@@ -4,7 +4,7 @@ import { useWorkspaceParams } from '@/hooks/use-workspace-params'
 import { useCountries, useCountryCatalog } from '@/hooks/use-atlas-data'
 import { Button } from '@/components/ui/button'
 import { ErrorState, LoadingState } from '@/components/query-state'
-import { countryFlag, incomeLabel, regionLabel } from '@/lib/country-labels'
+import { incomeLabel, regionLabel } from '@/lib/country-labels'
 
 export function CountryBrowser({ selected, onSelect }: { selected: string; onSelect: (code: string) => void }) {
   const [params, setParams] = useWorkspaceParams()
@@ -132,7 +132,6 @@ export function CountryBrowser({ selected, onSelect }: { selected: string; onSel
                 }}
                 className={`flex min-h-10 w-full items-center gap-2.5 rounded-sm px-2 py-2 text-left text-sm hover:bg-muted ${selected === country.iso3Code ? 'bg-muted font-semibold' : ''}`}
               >
-                <span aria-hidden="true" className="text-base">{countryFlag(country.iso2Code)}</span>
                 <span className="min-w-0 flex-1 break-words">{country.name}</span>
                 <span className="text-[10px] font-normal tracking-wide text-muted-foreground">{country.iso3Code}</span>
               </button>
