@@ -34,7 +34,7 @@ The World Bank often leaves its unit field empty. Units for the supported series
 
 Domain entities are JPA-mapped and validated by Hibernate. The import repository uses parameterized JDBC batches with PostgreSQL `ON CONFLICT` for efficient, atomic upserts. Both use the same datasource and Spring transaction manager; integration tests validate the JPA mappings against imported rows.
 
-Each country catalog batch, series update, and observation page is transactional. Progress counters are committed in the same transaction as their observations. A failure preserves previously committed pages and older historical periods, and marks the run FAILED. Repeating the import safely replaces current values. This preserves historical periods, not every previous version of each revised value.
+Each country catalog batch, series update, and observation page is transactional. Reusing an existing series with a different indicator, unit, or frequency is rejected; its definition must be reviewed instead of silently mixing measurements. Progress counters are committed in the same transaction as their observations. A failure preserves previously committed pages and older historical periods, and marks the run FAILED. Repeating the import safely replaces current values. This preserves historical periods, not every previous version of each revised value.
 
 A session-level PostgreSQL advisory lock prevents overlapping World Bank imports across processes. A new lock owner marks abandoned RUNNING executions as FAILED. No long database transaction is held while contacting the provider.
 

@@ -64,7 +64,7 @@ docker compose run --rm --no-deps backend \
   --atlas.import.to-year=2024
 ```
 
-The process exits after importing and returns a nonzero exit code on failure. Repeating a command updates existing observations without creating duplicates. Previously stored periods outside the requested interval remain unchanged.
+The process exits after importing and returns a nonzero exit code on failure. Scheduled jobs are disabled for this one-shot process, even when scheduling is enabled in the environment. Repeating a command updates existing observations without creating duplicates. Previously stored periods outside the requested interval remain unchanged.
 
 Scheduled refreshes are disabled by default. Set `WORLD_BANK_SCHEDULE_ENABLED=true` to enable a weekly refresh at 03:00 UTC on Sunday. Scheduled imports refresh the last six calendar years through the configured end year; run a full historical import periodically to capture older revisions. `WORLD_BANK_IMPORT_CRON` accepts a Spring six-field cron expression.
 

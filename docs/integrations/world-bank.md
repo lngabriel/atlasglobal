@@ -35,7 +35,7 @@ The import command and optional Spring scheduler call the same service. No impor
 
 The default catalog imports eight indicators for nine validation countries, while importing all nonaggregate country metadata. The configured country list can include any eligible country code returned by World Bank, without code changes. Imports accept 1–50 distinct country codes per execution.
 
-Manual execution uses the configured historical interval. The weekly scheduler refreshes the most recent six-year window within that interval. Full historical reconciliations use the same manual command. Scheduled execution is disabled by default.
+Manual execution uses the configured historical interval. The weekly scheduler refreshes the most recent six-year window within that interval. Full historical reconciliations use the same manual command. Scheduled execution is disabled by default and is always suppressed in one-shot import processes.
 
 Use the commands in the root README to inspect import status and coverage. Do not interpret the imported subset as a complete world ranking.
 
@@ -47,6 +47,6 @@ Test fixtures are derived from real responses captured on that date. The country
 
 The full historical import was repeated successfully: the database still contained 4,752 unique country/series/year observations. A persisted Brazil GDP observation for 2025 matched the official response value exactly (`2279920092492.13`).
 
-The automated suite passed 22 tests (17 unit/contract tests and five PostgreSQL integration tests). Backend and frontend Docker images built successfully, and an isolated three-service Compose deployment returned readiness UP. The documented container import command completed a separate 2022–2024 import with 216 observations. The frontend served its SPA fallback route through Nginx.
+Automated test results are recorded in the [validation report](../validation.md). Backend and frontend Docker images built successfully, and an isolated three-service Compose deployment returned readiness UP. The documented container import command completed a separate 2022–2024 import with 216 observations. The frontend served its SPA fallback route through Nginx.
 
 A command requesting an unavailable country returned exit code 1 and persisted a FAILED import with zero processed records, while the previous successful import remained intact.
