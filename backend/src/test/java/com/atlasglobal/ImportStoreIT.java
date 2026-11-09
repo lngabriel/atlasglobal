@@ -76,6 +76,18 @@ class ImportStoreIT {
         }
     }
 
+    @Test
+    void rejectsAUnitChangeForAnExistingSeries() {
+        UUID source = store.ensureSource();
+        var entry = WorldBankCatalog.ENTRIES.getFirst();
+        var metadata = new ProviderData.Indicator(entry.code(), "Test GDP", "Test definition", "Test provider");
+        store.series(source, entry, metadata);
+        var incompatible = new WorldBankCatalog.Entry(entry.code(), entry.name(), entry.category(), "EUR_CURRENT");
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> store.series(source, incompatible, metadata))
+            .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class).hasMessageContaining("unit");
+    }
+
     private ProviderData.Batch batch(String indicator, String year, String value) {
         return new ProviderData.Batch(List.of(new ProviderData.Observation("ZZZ", indicator, Integer.parseInt(year),
             value == null ? null : new BigDecimal(value), "")), LocalDate.of(2026, 10, 8));

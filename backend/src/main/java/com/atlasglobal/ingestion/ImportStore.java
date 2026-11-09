@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -66,15 +67,21 @@ public class ImportStore {
                 category = EXCLUDED.category
             """, UUID.randomUUID(), entry.code(), entry.name(), metadata.methodology(), entry.category());
         UUID indicator = jdbc.queryForObject("SELECT id FROM indicator WHERE code = ?", UUID.class, entry.code());
-        jdbc.update("""
+        int updated = jdbc.update("""
             INSERT INTO indicator_series (id, indicator_id, data_source_id, external_code, dataset_code,
                 original_name, methodology, source_organization, unit, frequency)
             VALUES (?, ?, ?, ?, '2', ?, ?, ?, ?, 'ANNUAL')
             ON CONFLICT (data_source_id, dataset_code, external_code) DO UPDATE SET
                 original_name = EXCLUDED.original_name, methodology = EXCLUDED.methodology,
                 source_organization = EXCLUDED.source_organization
+            WHERE indicator_series.indicator_id = EXCLUDED.indicator_id
+                AND indicator_series.unit = EXCLUDED.unit
+                AND indicator_series.frequency = EXCLUDED.frequency
             """, UUID.randomUUID(), indicator, source, entry.code(), metadata.originalName(),
             metadata.methodology(), metadata.sourceOrganization(), entry.unit());
+        if (updated != 1) {
+            throw new DataIntegrityViolationException("Existing series has an incompatible indicator, unit, or frequency");
+        }
         return jdbc.queryForObject("""
             SELECT id FROM indicator_series WHERE data_source_id = ? AND dataset_code = '2' AND external_code = ?
             """, UUID.class, source, entry.code());
