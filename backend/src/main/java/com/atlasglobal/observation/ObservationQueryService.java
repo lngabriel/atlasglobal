@@ -34,6 +34,9 @@ public class ObservationQueryService {
         var pageable = page.pageable("period", Set.of("period"), "countryCode");
         var indicator = indicators.get(code);
         var series = indicators.resolveSeries(indicator, seriesId);
+        if (countryCodes.size() > 1 && !series.comparison().allowed()) {
+            throw ApiException.conflict(series.comparison().note());
+        }
         return new HistoryResponse(indicator.indicator(), series, references, from, end,
             PageResponse.from(observations.history(series.id(), countryCodes, from, end, pageable)));
     }

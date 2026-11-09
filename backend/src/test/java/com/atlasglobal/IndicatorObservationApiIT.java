@@ -29,6 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class IndicatorObservationApiIT {
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
+    @Autowired com.atlasglobal.ingestion.ImportStore store;
     @MockitoSpyBean WorldBankProvider provider;
     private UUID source;
     private UUID indicator;
@@ -36,6 +37,29 @@ class IndicatorObservationApiIT {
     private UUID emptySeries;
     private UUID country;
     private UUID secondCountry;
+
+    @Test
+    void blocksNationalPovertyComparisonButKeepsIndividualHistoryAndPublicPolicy() throws Exception {
+        UUID nationalIndicator = UUID.randomUUID();
+        UUID nationalSeries = UUID.randomUUID();
+        UUID worldBank = store.ensureSource();
+        jdbc.update("INSERT INTO indicator (id,code,name,description,category) VALUES (?, ?, ?, ?, ?)",
+            nationalIndicator, "TEST.NATIONALPOVERTY", "National poverty", "Country-specific poverty lines", "INEQUALITY");
+        jdbc.update("""
+            INSERT INTO indicator_series (id,indicator_id,data_source_id,external_code,dataset_code,
+                original_name,methodology,source_organization,unit,frequency)
+            VALUES (?, ?, ?, 'SI.POV.NAHC', '2', 'National poverty', 'National thresholds',
+                'World Bank', 'PERCENT_POPULATION', 'ANNUAL')
+            """, nationalSeries, nationalIndicator, worldBank);
+        mvc.perform(get("/api/v1/indicators/TEST.NATIONALPOVERTY"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.series[0].comparison.allowed").value(false));
+        mvc.perform(get("/api/v1/indicators/TEST.NATIONALPOVERTY/history").param("countries", "TAA,TAB"))
+            .andExpect(status().isConflict()).andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+        mvc.perform(get("/api/v1/countries/TAA/indicators/TEST.NATIONALPOVERTY"))
+            .andExpect(status().isOk());
+        mvc.perform(get("/api/openapi"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.components.schemas.SeriesResponse.properties.comparison").exists());
+    }
 
     @BeforeEach
     void dataset() {
