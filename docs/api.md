@@ -11,7 +11,7 @@ With the default Docker Compose configuration:
 | Interactive Swagger UI | `http://localhost:3000/api/docs` or `http://localhost:8080/api/docs` |
 | OpenAPI document | `http://localhost:3000/api/openapi` or `http://localhost:8080/api/openapi` |
 
-The web application does not yet display analytical queries. The endpoints below can be used directly by clients and through Swagger UI.
+The React country explorer uses these endpoints for search, indicator summaries, and historical charts. Country profiles are also available at `/paises/{iso3Code}`. The same endpoints can be used independently by clients and through Swagger UI.
 
 ## Pagination and ordering
 

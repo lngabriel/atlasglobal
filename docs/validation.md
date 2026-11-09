@@ -65,3 +65,31 @@ The backend and frontend proxy were rebuilt and updated through Compose. Live HT
 - Readiness remained UP. The application database retained 4,752 unique observations and two completed import executions, confirming that these checks did not initiate an import.
 
 Docker builds now cache Maven project dependencies with BuildKit and still compile the application and execute unit tests. PostgreSQL integration tests run separately against the isolated test database.
+
+## Country explorer verification — 2026-11-09
+
+```bash
+cd frontend
+npm test
+npm run build
+npm run test:browser
+```
+
+The frontend unit suite passed **22 tests**, with no failures or skipped tests. Coverage includes complete API pagination, cancellation, failed intermediate pages, safe errors, numeric zero versus missing values, localized formatting, absent-year chart gaps, and comparable annual changes. The TypeScript and Vite production build passed. The frontend Docker build also executes the unit suite before compiling the application.
+
+The Chrome suite passed **24 checks** against the production application served by Nginx at `http://127.0.0.1:3000`, using the persisted World Bank dataset:
+
+- Headline GDP and individual indicator reference years matched the API responses.
+- Featured country selection, name search, region/income filters, category filtering, pagination, and shared URL state worked.
+- Empty country parameters and out-of-range country pages recovered to a usable workspace.
+- Direct country routes, annual histories, period presets, a custom single-year interval, and the accessible data table worked.
+- Explicit missing observations and years without an imported record remained distinct; neither became zero.
+- Keyboard navigation exposed chart tooltips. The theme preference survived reload.
+- Paused requests displayed loading without a stale chart. A controlled connection failure displayed a recoverable error, and retry restored the chart.
+- Layouts at 1440, 390, and 320 pixels had no page-level horizontal overflow. Mobile country selection preserved focus on a visible control.
+- A known country without observations, an unknown country, and an unknown route displayed their corresponding empty/error states.
+- No JavaScript exceptions, content policy violations, or unexpected API errors occurred.
+
+Desktop and mobile screenshots were visually reviewed in light and dark themes. On narrow screens, the indicator table keeps the reference year and source within each indicator row to preserve readable names and values.
+
+The backend readiness endpoint remained `{"status":"UP"}`. Read-only database checks confirmed 4,752 observations with 4,752 distinct country/series/year keys and two completed imports. These frontend checks did not initiate an import or modify application data. The existing backend test results above remain a separate verification record.

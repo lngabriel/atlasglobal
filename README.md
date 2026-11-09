@@ -4,13 +4,13 @@
 
 Atlas Global is an open-source platform for exploring public international data. Its backend imports World Bank country metadata and annual indicators into PostgreSQL, preserving source definitions, units, update dates, and missing values. Access is public and free, without accounts or authentication.
 
-The web interface provides a minimal indicator workspace with light and dark themes. Imported observations are available through a public REST API; the web interface does not yet expose data queries.
+The web interface opens directly into a country explorer, with Brazil selected by default. Country profiles combine current indicator summaries, historical charts, and source documentation in a responsive editorial layout with light and dark themes. The interface is in Brazilian Portuguese; the public REST API also supports independent clients.
 
 ## Stack
 
 - **Backend:** Java 21, Spring Boot 3, Spring Web, Spring Data JPA, Hibernate, Validation, Actuator, and Springdoc OpenAPI.
 - **Data:** PostgreSQL 17 and Flyway, with a World Bank API adapter and transactional batch imports.
-- **Frontend:** React, TypeScript, Vite, Tailwind CSS, shadcn/ui, React Router, and TanStack Query.
+- **Frontend:** React, TypeScript, Vite, Tailwind CSS, shadcn/ui, React Router, TanStack Query, and Recharts 3.
 - **Runtime:** Docker Compose, with separate backend, frontend, and database services.
 
 ## Quick start
@@ -33,6 +33,8 @@ docker compose ps
 
 Open **http://localhost:3000**. The database and its configured owner are created automatically when the PostgreSQL volume is initialized. Flyway applies and validates migrations when the backend starts.
 
+A new database has no imported observations. Run the [World Bank import command](#import-world-bank-data) below to populate the country explorer and charts. The interface reports unavailable data without substituting example values.
+
 To stop the services while preserving database contents:
 
 ```bash
@@ -40,6 +42,22 @@ docker compose down
 ```
 
 Changing `.env` does not update credentials in an existing PostgreSQL volume. Update existing database credentials directly in PostgreSQL. Never commit `.env`.
+
+## Explore the data
+
+- Search countries and economies by name or ISO code, filter by region and income group, and browse paginated results. Quick links open Brazil, the United States, and China. On narrow screens, open **Pesquisar países** to access the search controls.
+- Select a country to view GDP, population, GDP per capita, and life expectancy summaries, followed by its source-specific indicator catalog. Each value includes its own reference year; recent years can differ between series.
+- Filter the indicator catalog by category and choose a series to inspect its annual history. The default interval covers 20 calendar years through the current UTC year. Use the 10-year, 20-year, or since-1960 presets, or enter a custom interval.
+- Open **Ver dados em tabela** for the chart's accessible data table. It distinguishes a missing source value from a year with no imported record. Charts leave gaps in both cases and do not interpolate values.
+- Expand **Definição e procedência** for the original definition, unit, source organization, dataset, and documentation. Source update and collection dates appear below the chart.
+
+Country profiles have direct addresses such as `/paises/BRA`. Country selection, search filters, category, indicator, series, and interval are represented in the URL, allowing views to be bookmarked or shared. For example:
+
+```text
+http://localhost:3000/?pais=BRA&indicador=SP.POP.TOTL&de=2000&ate=2024
+```
+
+The catalog can contain countries without imported observations. Their profiles remain available and explicitly report the coverage gap.
 
 ## Public API
 
@@ -211,17 +229,36 @@ Integration tests verify migrations, entity mappings, transactional upserts, pre
 ```bash
 cd frontend
 npm ci
+npm test
 npm run typecheck
 npm run build
 ```
 
-Use `npm ci` to reproduce the dependency versions in `package-lock.json`.
+Frontend unit tests use Node.js 22's built-in test runner. They verify API pagination and cancellation, safe errors, formatting, missing-value handling, and historical calculations without requiring a running backend. The frontend Docker build runs these tests before compiling the production bundle.
+
+For browser checks, start the Compose services and complete the default nine-country import, then run:
+
+```bash
+cd frontend
+npm run test:browser
+```
+
+The browser suite requires a local Google Chrome installation and checks the running application. `ATLAS_BASE_URL` overrides the default `http://127.0.0.1:3000`; `CHROME_BIN` selects the Chrome executable.
+
+Use `npm ci` to reproduce the dependency versions in `package-lock.json`. Consult [validation results](docs/validation.md) for recorded checks and their environment.
 
 ## Project structure
 
 ```text
 backend/         Spring Boot application, provider adapters, migrations, and tests
-frontend/        React application and reusable UI components
+frontend/
+  src/app/       Route configuration
+  src/pages/     Country explorer, country profile, and project information
+  src/components/  Search, dashboard, historical chart, and reusable UI
+  src/hooks/     Query hooks and display theme
+  src/services/  Typed API client and query cache configuration
+  src/lib/       Formatting, country labels, and historical transformations
+  tests/         Unit tests and browser checks
 infrastructure/  Local runtime configuration guidance
 docs/            Technical architecture, data model, and provider documentation
 ```
