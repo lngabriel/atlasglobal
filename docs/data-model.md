@@ -38,4 +38,4 @@ Each country catalog batch, series update, and observation page is transactional
 
 A session-level PostgreSQL advisory lock prevents overlapping World Bank imports across processes. A new lock owner marks abandoned RUNNING executions as FAILED. No long database transaction is held while contacting the provider.
 
-Observations are indexed by series/year/value for later analytical queries, with a unique index covering country/series/year histories. Import history is indexed by provider/start time.
+Observations are indexed by series/year/value for analytical queries, with a unique index covering country/series/year histories. Import history is indexed by provider/start time.

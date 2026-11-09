@@ -4,18 +4,18 @@
 
 Atlas Global is an open-source platform for exploring public international data. Its backend imports World Bank country metadata and annual indicators into PostgreSQL, preserving source definitions, units, update dates, and missing values. Access is public and free, without accounts or authentication.
 
-The web interface provides a minimal indicator workspace with light and dark themes. Imported observations are currently available in the database; the web interface does not yet expose data queries.
+The web interface provides a minimal indicator workspace with light and dark themes. Imported observations are available through a public REST API; the web interface does not yet expose data queries.
 
 ## Stack
 
-- **Backend:** Java 21, Spring Boot 3, Spring Web, Spring Data JPA, Hibernate, Validation, and Actuator.
+- **Backend:** Java 21, Spring Boot 3, Spring Web, Spring Data JPA, Hibernate, Validation, Actuator, and Springdoc OpenAPI.
 - **Data:** PostgreSQL 17 and Flyway, with a World Bank API adapter and transactional batch imports.
 - **Frontend:** React, TypeScript, Vite, Tailwind CSS, shadcn/ui, React Router, and TanStack Query.
 - **Runtime:** Docker Compose, with separate backend, frontend, and database services.
 
 ## Quick start
 
-Install Docker Engine and Docker Compose v2 or later, then clone the repository:
+Install Docker Engine with BuildKit enabled and Docker Compose v2 or later, then clone the repository:
 
 ```bash
 git clone https://github.com/lngabriel/atlasglobal.git
@@ -40,6 +40,26 @@ docker compose down
 ```
 
 Changing `.env` does not update credentials in an existing PostgreSQL volume. Update existing database credentials directly in PostgreSQL. Never commit `.env`.
+
+## Public API
+
+The read-only API is available at **http://localhost:3000/api/v1** through the frontend proxy, or **http://localhost:8080/api/v1** directly. Queries read persisted PostgreSQL data and do not contact external providers.
+
+- [Interactive API documentation](http://localhost:3000/api/docs)
+- [OpenAPI JSON](http://localhost:3000/api/openapi)
+- [API reference](docs/api.md)
+
+After importing data, query the country and indicator catalogs or retrieve an annual series:
+
+```bash
+curl --fail 'http://localhost:3000/api/v1/countries?q=Brasil&page=0&size=20'
+curl --fail 'http://localhost:3000/api/v1/indicators?category=ECONOMY&source=WORLD_BANK'
+curl --fail 'http://localhost:3000/api/v1/countries/BRA/indicators/NY.GDP.MKTP.CD?from=2020&to=2024'
+```
+
+Country searches support names, ISO codes, region, and income filters. Indicator searches support name/code, category, and source filters. Collections are paginated, with at most 100 records per page and explicit allowed sort fields. Historical responses include units, source metadata, and missing-value status; ambiguous indicators require an explicit `seriesId`.
+
+All queries are public and require no account, token, or authentication header. The API has no public write, import, or administrative operations.
 
 ## Import World Bank data
 
@@ -186,7 +206,7 @@ export DB_PASSWORD='your-local-test-password'
 mvn -f backend/pom.xml -Pintegration verify
 ```
 
-Integration tests verify migrations, entity mappings, transactional upserts, precision, import history, concurrency protection, and Actuator isolation. Import store tests roll back their changes. Provider contract tests use recorded response fixtures and controlled error responses; production imports always use the real API.
+Integration tests verify migrations, entity mappings, transactional upserts, precision, import history, concurrency protection, public API contracts, filtering, pagination, validation, and Actuator isolation. Import store tests roll back their changes. Provider contract tests use recorded response fixtures and controlled error responses; production imports always use the real API.
 
 ```bash
 cd frontend
@@ -206,4 +226,4 @@ infrastructure/  Local runtime configuration guidance
 docs/            Technical architecture, data model, and provider documentation
 ```
 
-Technical references: [data model](docs/data-model.md) and [World Bank integration](docs/integrations/world-bank.md).
+Technical references: [API reference](docs/api.md), [data model](docs/data-model.md), and [World Bank integration](docs/integrations/world-bank.md).

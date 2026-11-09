@@ -8,9 +8,9 @@ Environment verified using Java 21.0.13, Maven 3.9.12, PostgreSQL 17.11, Node.js
 mvn -f backend/pom.xml -Pintegration verify
 ```
 
-Last run on 2026-11-09: **BUILD SUCCESS**, 24 tests passed (18 unit/contract tests and six PostgreSQL integration tests), without failures or skipped tests.
+Last run on 2026-11-09: **BUILD SUCCESS**, 40 tests passed (18 unit/contract tests and 22 PostgreSQL integration tests), without failures or skipped tests.
 
-Coverage includes explicit CORS policy, safe error responses, World Bank response decoding, country aggregate exclusion, metadata normalization, decimal precision, missing values versus zero, pagination completeness, transient and permanent HTTP failures, provider error envelopes, import configuration limits, Flyway migrations, JPA mappings, transactional upserts, historical retention, import history, concurrent import exclusion, incompatible unit rejection, one-shot scheduling isolation, and Actuator isolation.
+Coverage includes explicit CORS policy, safe error responses, World Bank response decoding, country aggregate exclusion, metadata normalization, decimal precision, missing values versus zero, pagination completeness, transient and permanent HTTP failures, provider error envelopes, import configuration limits, Flyway migrations, JPA mappings, transactional upserts, historical retention, import history, concurrent import exclusion, incompatible unit rejection, one-shot scheduling isolation, and Actuator isolation. Public API tests cover country/source filters, stable pagination, literal search, source-specific histories, missing values, explicit series selection, OpenAPI, and rejection of write methods. A provider spy verifies that query requests do not call external sources.
 
 Tests use a dedicated database. Store integration tests run in transactions that roll back their writes.
 
@@ -50,3 +50,18 @@ The backend image was rebuilt and updated through Docker Compose. The documented
 - Backend readiness returned `{"status":"UP"}` after the import.
 
 The previously loaded observations were updated without duplication. The application services remain available; the isolated test database is stopped after verification.
+
+
+## Public API verification — 2026-11-09
+
+The backend and frontend proxy were rebuilt and updated through Compose. Live HTTP checks passed through port 3000 for country, indicator, and source catalogs, country summaries, and annual histories using the imported World Bank dataset.
+
+- Brazil GDP history for 2020–2024 returned five observations with USD_CURRENT and World Bank metadata.
+- The same interval for Brazil and the United States returned ten raw observations from one series.
+- Invalid pagination returned 400, an unknown country returned 404, and POST to a query collection returned 405, with ProblemDetail responses.
+- The OpenAPI 3.0 document exposed nine paths containing only GET operations and correctly typed error schemas.
+- Swagger UI, its assets, and its configuration loaded through the proxy. A Chrome keyboard/mouse check used “Try it out” to fetch Brazil with HTTP 200 and no authentication.
+- The Swagger inline-style exception is scoped to `/api/swagger-ui/`; the main application retains its stricter content policy.
+- Readiness remained UP. The application database retained 4,752 unique observations and two completed import executions, confirming that these checks did not initiate an import.
+
+Docker builds now cache Maven project dependencies with BuildKit and still compile the application and execute unit tests. PostgreSQL integration tests run separately against the isolated test database.
