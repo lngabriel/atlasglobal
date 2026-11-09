@@ -13,11 +13,15 @@ public record ImportProperties(
     @DefaultValue("0") int toYear) {
     public ImportProperties {
         countries = List.copyOf(countries);
-        if (toYear == 0) toYear = Year.now(ZoneOffset.UTC).getValue();
+        int end = toYear == 0 ? Year.now(ZoneOffset.UTC).getValue() : toYear;
         if (countries.isEmpty() || countries.size() > 50 || countries.stream().distinct().count() != countries.size()
             || countries.stream().anyMatch(c -> !c.matches("[A-Z0-9]{3}"))
-            || fromYear < 1960 || toYear < fromYear || toYear > Year.now(ZoneOffset.UTC).getValue()) {
+            || fromYear < 1960 || end < fromYear || end > Year.now(ZoneOffset.UTC).getValue()) {
             throw new IllegalArgumentException("Invalid import countries or year interval");
         }
+    }
+
+    public int endYear() {
+        return toYear == 0 ? Year.now(ZoneOffset.UTC).getValue() : toYear;
     }
 }

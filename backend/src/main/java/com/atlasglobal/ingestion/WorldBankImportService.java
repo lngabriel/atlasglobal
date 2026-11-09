@@ -27,12 +27,12 @@ public class WorldBankImportService {
     }
 
     public UUID run() {
-        return run(settings.fromYear(), settings.toYear());
+        return run(settings.fromYear(), settings.endYear());
     }
 
     public UUID refreshRecent() {
-        return run(Math.max(settings.fromYear(), settings.toYear() - 5),
-            settings.toYear());
+        return run(Math.max(settings.fromYear(), settings.endYear() - 5),
+            settings.endYear());
     }
 
     private UUID run(int fromYear, int toYear) {
