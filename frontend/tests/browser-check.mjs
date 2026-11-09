@@ -5,7 +5,7 @@ import { rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
-// Run against a built application with the documented World Bank import loaded.
+// Run against a built application with the documented World Bank and OECD imports loaded.
 // Uses Chrome's DevTools protocol and Node's built-in APIs; no browser SDK needed.
 const base = new URL(process.env.ATLAS_BASE_URL ?? 'http://127.0.0.1:3000')
 assert.ok(['http:', 'https:'].includes(base.protocol), 'ATLAS_BASE_URL must use HTTP or HTTPS')
@@ -38,6 +38,7 @@ let lastPage = ''
 const exceptions = []
 const cspErrors = []
 const unexpectedHttpErrors = []
+const requestedComparisons = []
 let interceptionMode = null
 const pausedRequests = []
 
@@ -71,6 +72,7 @@ try {
       else void call('Fetch.continueRequest', { requestId }).catch(() => { /* Navigation may have cancelled this request. */ })
     }
     if (message.method === 'Runtime.exceptionThrown') exceptions.push(message.params.exceptionDetails)
+    if (message.method === 'Network.requestWillBeSent' && /\/api\/v1\/indicators\/[^/]+\/history(?:\?|$)/.test(message.params.request.url)) requestedComparisons.push(message.params.request.url)
     if (message.method === 'Log.entryAdded' && /Content Security Policy|Refused to (?:load|apply)|violates.*policy/i.test(message.params.entry.text)) cspErrors.push(message.params.entry.text)
     if (message.method === 'Network.responseReceived') {
       const response = message.params.response
@@ -100,7 +102,7 @@ try {
       if (await evaluate(expression)) return
       await pause(100)
     }
-    throw new Error(`Timed out waiting for ${description}. Page: ${await evaluate('document.body.innerText.slice(0, 2000)')}`)
+    throw new Error(`Timed out waiting for ${description}. URL: ${await evaluate('location.href')}. Page: ${await evaluate('document.body.innerText.slice(0, 2000)')}`)
   }
   async function navigate(path) {
     lastPage = path
@@ -154,7 +156,37 @@ try {
   await call('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false })
   const [brazil, summaries] = await Promise.all([api('/countries/BRA'), api('/countries/BRA/indicators?size=100')])
   assert.ok(summaries.content.some(item => item.latestAvailable), 'Import the documented World Bank dataset before running browser checks')
+  const featuredCodes = ['ARG', 'AUS', 'BRA', 'CAN', 'CHL', 'CHN', 'FRA', 'HKG', 'ISR', 'ITA', 'JPN', 'PRY', 'POL', 'PRT', 'RUS', 'SGP', 'KOR', 'ESP', 'CHE', 'TWN', 'UKR', 'GBR', 'USA', 'VEN', 'VNM']
+  const overview = await api('/overview')
+  assert.equal(overview.scope.code, 'WLD')
+  assert.ok(overview.indicators.some(item => item.latestAvailable), 'Import the documented world aggregate data before running browser checks')
   await navigate('/')
+  await waitFor(`document.querySelectorAll('#featured-countries a[data-country]').length === 25`, 'the complete curated country selection')
+  const featured = await evaluate(`Array.from(document.querySelectorAll('#featured-countries a[data-country]')).map(link => ({ code: link.dataset.country, path: new URL(link.href).pathname }))`)
+  assert.deepEqual(featured.map(item => item.code), featuredCodes)
+  for (const item of featured) assert.equal(item.path, `/paises/${item.code}`)
+  assert.equal(await evaluate(`/[\\u{1F1E6}-\\u{1F1FF}]/u.test(document.body.innerText)`), false, 'The interface must not use emoji country flags')
+  pass('homepage displays exactly the 25 requested countries with direct profile links and no emoji flags')
+  for (const item of overview.indicators.filter(entry => entry.latestAvailable)) {
+    const value = item.latestAvailable.value
+    const amount = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: item.series.unit === 'PERSONS' ? 0 : 2 }).format(value)
+    const expected = item.series.unit === 'USD_CURRENT' ? `US$ ${amount}`
+      : item.series.unit === 'PERSONS' ? `${amount} pessoas`
+        : item.series.unit === 'YEARS' ? `${amount} anos`
+          : item.series.unit.startsWith('PERCENT_') ? `${amount}%` : amount
+    await waitFor(`!!document.querySelector('#overview [data-indicator=${JSON.stringify(item.indicator.code)}]')`, `world indicator ${item.indicator.code}`)
+    assert.ok(await evaluate(`(() => { const metric = document.querySelector('#overview [data-indicator=${JSON.stringify(item.indicator.code)}]'); return Array.from(metric.querySelectorAll('[title]')).some(element => element.title === ${JSON.stringify(expected)}) && metric.textContent.includes(${JSON.stringify(String(item.latestAvailable.period))}) && metric.textContent.includes(${JSON.stringify(item.series.source.name)}); })()`), `World metric must match the provider aggregate, reference year and source: ${item.indicator.code}`)
+  }
+  pass('global highlights match the real WLD aggregate with their source and individual reference years')
+  await noOverflow('homepage desktop has no horizontal overflow')
+  await screenshot('home-desktop-light')
+  await input('#home-country-query', 'Brasil')
+  await waitFor(`document.querySelectorAll('#featured-countries a[data-country]').length === 1 && document.querySelector('#featured-countries a[data-country]')?.dataset.country === 'BRA'`, 'curated country search')
+  await click(`document.querySelector('#featured-countries a[data-country="BRA"]')`)
+  await waitFor(`location.pathname === '/paises/BRA'`)
+  await readyDashboard()
+  pass('homepage search opens the matching individual country profile')
+  await navigate('/explorar')
   await readyDashboard()
   assert.ok(await evaluate(`document.querySelector('article')?.getAttribute('aria-label').includes(${JSON.stringify(brazil.name)})`))
   const rows = await evaluate(`Array.from(document.querySelectorAll('.data-table tbody tr')).map(row => ({ name: row.querySelector('button')?.textContent, year: row.querySelectorAll('td')[1]?.textContent, title: row.querySelector('td')?.title }))`)
@@ -169,16 +201,7 @@ try {
       assert.ok(await evaluate(`Array.from(document.querySelectorAll('.metric [title]')).some(element => element.title === ${JSON.stringify(expected)})`), 'Headline GDP must match the real API value')
     }
   }
-  pass('homepage renders real API values and individual reference years')
-  const usa = await api('/countries/USA')
-  await waitFor(`document.querySelectorAll('nav[aria-label="Países em destaque"] button').length === 3`, 'featured countries from the real catalog')
-  await click(`Array.from(document.querySelectorAll('nav[aria-label="Países em destaque"] button')).find(element => element.textContent === ${JSON.stringify(usa.name)})`)
-  await waitFor(`new URLSearchParams(location.search).get('pais') === 'USA' && document.querySelector('article')?.getAttribute('aria-label').includes(${JSON.stringify(usa.name)})`, 'featured country selection')
-  await readyDashboard()
-  await click(`Array.from(document.querySelectorAll('nav[aria-label="Países em destaque"] button')).find(element => element.textContent === ${JSON.stringify(brazil.name)})`)
-  await waitFor(`new URLSearchParams(location.search).get('pais') === 'BRA' && document.querySelector('article')?.getAttribute('aria-label').includes(${JSON.stringify(brazil.name)})`)
-  await readyDashboard()
-  pass('featured country links use catalog names and switch the dashboard')
+  pass('full catalog explorer preserves real API values and individual reference years')
   await select('#indicator-category', 'ECONOMY')
   await waitFor(`document.querySelector('#indicator-category')?.value === 'ECONOMY' && document.querySelectorAll('.data-table tbody tr').length === ${summaries.content.filter(item => item.indicator.category === 'ECONOMY').length}`, 'indicator category filter')
   assert.equal(await evaluate('document.querySelector("#history-title")?.textContent'), summaries.content.find(item => item.indicator.code === 'NY.GDP.MKTP.CD').indicator.name, 'Category filtering must preserve the selected history')
@@ -193,7 +216,7 @@ try {
   await noOverflow('desktop has no horizontal overflow')
   await screenshot('desktop-light')
 
-  await navigate('/?pais=&pagina=10000')
+  await navigate('/explorar?pais=&pagina=10000')
   await readyDashboard()
   assert.ok(await evaluate(`document.querySelector('article')?.getAttribute('aria-label').includes(${JSON.stringify(brazil.name)})`), 'An empty country parameter must fall back to Brazil')
   await waitFor(`Array.from(document.querySelectorAll('#country-search button')).some(element => element.textContent.trim() === 'Voltar à primeira página')`, 'out-of-range country page recovery')
@@ -217,7 +240,8 @@ try {
   await waitFor(`Number(document.querySelector('#country-search [role="status"]')?.textContent.trim().split(' ')[0]) === ${filtered.totalElements}`, 'filtered country count from API')
   pass('region and income filters match the API result count')
   await click(`Array.from(document.querySelectorAll('button')).find(element => element.textContent.trim() === 'Limpar filtros')`)
-  await waitFor(`!new URLSearchParams(location.search).has('regiao') && !!document.querySelector('button[aria-label="Próxima página de países"]:not(:disabled)')`)
+  const unfiltered = await api('/countries?size=8')
+  await waitFor(`['q', 'regiao', 'renda', 'pagina'].every(key => !new URLSearchParams(location.search).has(key)) && Number(document.querySelector('#country-search [role="status"]')?.textContent.trim().split(' ')[0]) === ${unfiltered.totalElements} && !!document.querySelector('button[aria-label="Próxima página de países"]:not(:disabled)')`, 'complete unfiltered country page before pagination')
   await click(`document.querySelector('button[aria-label="Próxima página de países"]')`)
   await waitFor(`new URLSearchParams(location.search).get('pagina') === '1' && document.querySelectorAll('#country-search li').length > 0`)
   pass('country pagination is usable')
@@ -280,9 +304,82 @@ try {
   await readyDashboard()
   pass('retry restores the historical chart after a network failure')
 
-  for (const width of [390, 320]) {
+  const gdp = summaries.content.find(item => item.indicator.code === 'NY.GDP.MKTP.CD')
+  assert.ok(gdp, 'The GDP series must be imported before comparing countries')
+  const comparison = await api(`/indicators/NY.GDP.MKTP.CD/history?countries=BRA,USA&seriesId=${encodeURIComponent(gdp.series.id)}&from=2020&to=2024&size=100`)
+  const availableByCountry = ['BRA', 'USA'].map(code => comparison.observations.content.filter(item => item.countryCode === code && item.status === 'AVAILABLE' && item.value !== null))
+  const commonYear = availableByCountry[0].map(item => item.period).filter(period => availableByCountry[1].some(item => item.period === period)).sort((a, b) => b - a)[0]
+  assert.ok(commonYear, 'The imported GDP series must have a common BRA/USA observation year for browser verification')
+  await navigate(`/comparar?paises=BRA,USA&indicador=NY.GDP.MKTP.CD&serie=${encodeURIComponent(gdp.series.id)}&de=2020&ate=2024`)
+  await waitFor(`!!document.querySelector('#comparison-reference-title') && !!document.querySelector('.recharts-surface')`, 'source-specific comparison and chart')
+  assert.ok(await evaluate(`document.querySelector('#comparison-reference-title').parentElement.textContent.includes('${commonYear}')`), 'Comparison headline values must use a common reference year')
+  const comparisonValues = await evaluate(`Array.from(document.querySelector('#comparison-reference-title').closest('section').querySelectorAll('dl > div')).map(item => ({ name: item.querySelector('dt').textContent, value: item.querySelector('dd[title]').title }))`)
+  for (const country of comparison.countries) {
+    const observation = comparison.observations.content.find(item => item.countryCode === country.iso3Code && item.period === commonYear)
+    const expected = `US$ ${new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(observation.value)}`
+    assert.equal(comparisonValues.find(item => item.name === country.name)?.value, expected)
+  }
+  await click(`Array.from(document.querySelectorAll('summary')).find(element => element.textContent.includes('Ver comparação em tabela'))`)
+  const comparisonRows = await evaluate(`Array.from(Array.from(document.querySelectorAll('table')).find(table => table.caption?.textContent.includes('Comparação anual')).tBodies[0].rows).map(row => ({ year: Number(row.cells[0].textContent), values: Array.from(row.cells).slice(1).map(cell => cell.querySelector('span')?.textContent) }))`)
+  assert.equal(comparisonRows.length, 5)
+  for (const row of comparisonRows) for (const [index, code] of ['BRA', 'USA'].entries()) {
+    const observation = comparison.observations.content.find(item => item.countryCode === code && item.period === row.year)
+    const expected = observation?.status === 'AVAILABLE' && observation.value !== null ? `US$ ${new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(observation.value)}` : '—'
+    assert.equal(row.values[index], expected)
+  }
+  pass('comparison uses one source series, aligns actual API values by year and identifies a common reference year')
+  await screenshot('comparison-desktop')
+  for (const [index, code] of ['CHN', 'JPN', 'FRA'].entries()) {
+    await select('#comparison-country', code)
+    await waitFor(`document.querySelectorAll('ul[aria-label="Países selecionados para comparação"] li').length === ${index + 3}`, 'country selection within the comparison limit')
+  }
+  assert.equal(await evaluate('document.querySelector("#comparison-country").disabled'), true)
+  await waitFor(`!!document.querySelector('.recharts-surface') && document.querySelectorAll('ul[aria-label="Legenda dos países"] li').length === 5`, 'five-country comparison')
+  pass('comparison supports up to five selected countries without mixing series')
+
+  const gini = await api('/indicators/SI.POV.GINI')
+  assert.ok(gini.series[0]?.comparison?.note, 'Gini must publish its comparability caveat')
+  await navigate(`/comparar?paises=BRA,USA&indicador=SI.POV.GINI&serie=${encodeURIComponent(gini.series[0].id)}`)
+  await waitFor(`document.querySelector('#comparison-title')?.textContent === ${JSON.stringify(gini.indicator.name)} && document.body.innerText.includes(${JSON.stringify(gini.series[0].comparison.note)})`, 'Gini methodology caveat')
+  pass('Gini comparison identifies the income and consumption methodology caveat')
+
+  const wages = await api('/indicators/OECD.WAGE.AVERAGE.PPP')
+  const wageSeries = wages.series.find(series => /^USD_PPP_\d{4}_ANNUAL$/.test(series.unit))
+  assert.ok(wageSeries, 'Import the documented OECD wage dataset before running browser checks')
+  const usIndicators = await api('/countries/USA/indicators?size=100')
+  const usWages = usIndicators.content.find(item => item.series.id === wageSeries.id)
+  assert.ok(usWages?.latestAvailable, 'The US wage series must have an actual OECD observation')
+  await navigate(`/paises/USA?indicador=OECD.WAGE.AVERAGE.PPP&serie=${encodeURIComponent(wageSeries.id)}`)
+  await readyDashboard()
+  const priceBase = /^USD_PPP_(\d{4})_ANNUAL$/.exec(wageSeries.unit)[1]
+  const expectedWage = `US$ PPC ${new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(usWages.latestAvailable.value)}`
+  assert.ok(await evaluate(`document.querySelector('#history-title')?.textContent === ${JSON.stringify(wages.indicator.name)} && document.body.innerText.includes(${JSON.stringify(`preços constantes de ${priceBase}`)}) && Array.from(document.querySelectorAll('[title]')).some(element => element.title === ${JSON.stringify(expectedWage)}) && document.body.innerText.includes('OECD')`), 'Wage profile must identify the actual annual PPP value, provider and price base')
+  assert.equal(usWages.latestAvailable.sourceUpdatedAt, null, 'The HTTP resource date must not become a statistical update date')
+  pass('OECD wage profile preserves the real annual PPP value, source and reported price base')
+
+  const nationalPoverty = await api('/indicators/SI.POV.NAHC')
+  assert.equal(nationalPoverty.series[0]?.comparison?.allowed, false)
+  await navigate(`/comparar?paises=BRA,USA&indicador=SI.POV.NAHC&serie=${encodeURIComponent(nationalPoverty.series[0].id)}`)
+  await waitFor(`document.body.innerText.includes('A comparação entre países está indisponível devido às diferenças metodológicas')`, 'national poverty comparison restriction')
+  assert.equal(await evaluate('document.querySelectorAll(".recharts-surface").length'), 0)
+  assert.equal(requestedComparisons.some(request => request.includes('/indicators/SI.POV.NAHC/history')), false, 'Methodologically incompatible national poverty must not trigger a comparison history request')
+  pass('national poverty comparison is blocked with its source methodology and no history request')
+  await navigate(`/comparar?paises=BRA,TWN&indicador=NY.GDP.MKTP.CD&serie=${encodeURIComponent(gdp.series.id)}`)
+  await waitFor(`document.querySelector('#comparison-reference-title') && document.body.innerText.includes('Sem valor no período')`, 'country without source observations in a comparison')
+  const taiwanComparison = await evaluate(`Array.from(document.querySelector('#comparison-reference-title').closest('section').querySelectorAll('dl > div')).map(item => ({ name: item.querySelector('dt').textContent, value: item.querySelector('dd[title]').textContent }))`)
+  assert.equal(taiwanComparison.find(item => item.name.includes('Taiwan'))?.value, '—')
+  pass('an unavailable Taiwan series remains missing in comparison rather than becoming zero')
+
+  for (const width of [768, 390, 320]) {
     await call('Emulation.setDeviceMetricsOverride', { width, height: 844, deviceScaleFactor: 1, mobile: true })
     await navigate('/')
+    await waitFor(`document.querySelectorAll('#featured-countries a[data-country]').length === 25`, 'responsive curated country grid')
+    await noOverflow(`homepage ${width}px has no horizontal overflow`)
+    await screenshot(`home-${width}`)
+    await navigate('/comparar?paises=BRA,USA&de=2020&ate=2024')
+    await waitFor(`!!document.querySelector('#comparison-reference-title') && !!document.querySelector('.recharts-surface')`, 'responsive comparison')
+    await noOverflow(`comparison ${width}px has no horizontal overflow`)
+    await navigate('/explorar')
     await readyDashboard()
     await noOverflow(`mobile ${width}px has no horizontal overflow`)
     await screenshot(`mobile-${width}`)
