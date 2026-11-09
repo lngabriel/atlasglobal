@@ -4,6 +4,7 @@ import com.atlasglobal.integration.worldbank.WorldBankCatalog;
 import com.atlasglobal.integration.worldbank.WorldBankProvider;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.UUID;
 import javax.sql.DataSource;
 import org.slf4j.Logger;
@@ -18,12 +19,14 @@ public class WorldBankImportService {
     private static final long LOCK_KEY = 728301952147L;
     private final DataProvider provider;
     private final ImportStore store;
+    private final OverviewImportStore overview;
     private final ImportProperties settings;
     private final DataSource database;
 
-    public WorldBankImportService(WorldBankProvider provider, ImportStore store,
+    public WorldBankImportService(WorldBankProvider provider, ImportStore store, OverviewImportStore overview,
                                  ImportProperties settings, DataSource database) {
-        this.provider = provider; this.store = store; this.settings = settings; this.database = database;
+        this.provider = provider; this.store = store; this.overview = overview;
+        this.settings = settings; this.database = database;
     }
 
     public UUID run() {
@@ -57,7 +60,7 @@ public class WorldBankImportService {
     private UUID importData(int fromYear, int toYear) {
         UUID source = store.ensureSource();
         UUID run = store.start(source, String.join(",", settings.countries()) + ";years="
-            + fromYear + ":" + toYear);
+            + fromYear + ":" + toYear + ";world=WLD");
         try {
             var countries = provider.countries();
             for (String requested : settings.countries()) {
@@ -70,6 +73,10 @@ public class WorldBankImportService {
                 UUID series = store.series(source, entry, provider.indicator(entry.code()));
                 provider.observations(settings.countries(), entry.code(), fromYear, toYear,
                     batch -> store.observations(run, series, batch));
+                if (WorldBankCatalog.WORLD_INDICATORS.contains(entry.code())) {
+                    provider.observations(List.of("WLD"), entry.code(), fromYear, toYear,
+                        batch -> overview.observations(run, series, batch));
+                }
                 LOG.info("Imported provider={} indicator={} importId={}", provider.code(), entry.code(), run);
             }
             store.complete(run);

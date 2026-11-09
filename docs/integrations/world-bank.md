@@ -23,6 +23,41 @@ Responses contain a two-element JSON array: pagination metadata and records. Obs
 
 The client follows every page, checks page/record totals, and rejects pagination or source-update changes during a response sequence. WDI source `2` is explicit for both metadata and observation requests. Aggregates have region ID `NA` and are excluded. Empty coordinate strings become null.
 
+## Socioeconomic series
+
+The catalog includes the original eight indicators and the following sixteen annual series from WDI source `2`. Codes, source metadata, and recent observations were verified against the official API on 2026-11-09. Values are stored exactly as published, without deriving additional measures.
+
+| Indicator | Code | Stored unit |
+| --- | --- | --- |
+| GDP per capita at purchasing power parity | `NY.GDP.PCAP.PP.CD` | Current international dollars per person |
+| Gini index | `SI.POV.GINI` | Index from 0 to 100 |
+| Poverty below $3.00/day, 2021 PPP | `SI.POV.DDAY` | Percent of population |
+| Poverty below $4.20/day, 2021 PPP | `SI.POV.LMIC` | Percent of population |
+| Poverty below $8.30/day, 2021 PPP | `SI.POV.UMIC` | Percent of population |
+| Poverty at national poverty lines | `SI.POV.NAHC` | Percent of population |
+| Income or consumption share, lowest quintile | `SI.DST.FRST.20` | Percent of income or consumption |
+| Income or consumption share, second quintile | `SI.DST.02ND.20` | Percent of income or consumption |
+| Income or consumption share, third quintile | `SI.DST.03RD.20` | Percent of income or consumption |
+| Income or consumption share, fourth quintile | `SI.DST.04TH.20` | Percent of income or consumption |
+| Income or consumption share, highest quintile | `SI.DST.05TH.20` | Percent of income or consumption |
+| Income or consumption share, highest decile | `SI.DST.10TH.10` | Percent of income or consumption |
+| Intentional homicides | `VC.IHR.PSRC.P5` | Homicides per 100,000 population |
+| Net migration | `SM.POP.NETM` | Persons |
+| International migrant stock | `SM.POP.TOTL` | Persons |
+| International migrant stock share | `SM.POP.TOTL.ZS` | Percent of population |
+
+The poverty thresholds use **2021 purchasing power parity**; these series must not be mixed with older editions using other thresholds or PPP bases. Gini and income shares reflect household income or consumption surveys with differences in welfare measures and survey methods. [National poverty lines](https://databank.worldbank.org/metadataglossary/world-development-indicators/series/SI.POV.NAHC) are country-specific and must not be used for direct cross-country poverty comparisons. The [Gini metadata](https://databank.worldbank.org/metadataglossary/world-development-indicators/series/SI.POV.GINI) explains additional limits on comparisons across countries and years.
+
+GDP per capita in PPP is an economic-output measure adjusted for price-level differences. It is neither a wage nor a direct measurement of household purchasing power. Intentional homicide is a specific UNODC definition; it does not represent a general crime rate or all violent deaths.
+
+[Net migration](https://databank.worldbank.org/metadataglossary/world-development-indicators/series/SM.POP.NETM) is the annual number of immigrants minus emigrants, including citizens and noncitizens. It is not a separate immigration or emigration rate. [Migrant stock](https://databank.worldbank.org/metadataglossary/world-development-indicators/series/SM.POP.TOTL) is primarily the foreign-born population, including refugees, with citizenship-based substitutes in some economies. It is not interchangeable with foreign-national resident counts. Its percentage uses the UN population denominator, so counts must not be reconstructed by multiplying the percentage by WDI population. Survey and census years remain sparse; gaps are preserved.
+
+## Published world aggregates
+
+Each import also retrieves the official `WLD` aggregate for GDP, population, life expectancy, and Internet use. These observations are stored in `world_indicator_observation`, separately from countries and country histories. `WLD` is never added to the country catalog. The read-only `/api/v1/overview` endpoint returns these published values and their original reference years and provenance; it does not calculate a world total or average from the countries selected in the interface.
+
+World observations participate in the same provider lock and import execution. Their processed rows contribute to `records_imported`, including missing values and updates, and the execution scope records `world=WLD`. Repeated imports update `(series_id, period)` keys without duplicating data.
+
 ## Resilience
 
 Defaults: 500 rows per page, 10-second connection timeout, 45-second read timeout, and at most three attempts. Retries apply to connection failures, HTTP 429, and HTTP 5xx. Permanent HTTP failures, malformed JSON, provider error envelopes, incomplete results, and incompatible identifiers fail immediately.
@@ -33,7 +68,7 @@ Backoff is bounded. `Retry-After` supports seconds and HTTP dates; waits beyond 
 
 The import command and optional Spring scheduler call the same service. No import controller or administrative route exists. Startup without the import flag and without scheduling performs no provider calls.
 
-The default catalog imports eight indicators for nine validation countries, while importing all nonaggregate country metadata. The configured country list can include any eligible country code returned by World Bank, without code changes. Imports accept 1–50 distinct country codes per execution.
+The catalog imports twenty-four indicators for the configured countries, while importing all nonaggregate country metadata and the four world series described above. The configured country list can include any eligible country code returned by World Bank, without code changes. Imports accept 1–50 distinct country codes per execution. Taiwan is not available through the WDI country endpoint and must not be requested through this adapter.
 
 Manual execution uses the configured historical interval. The weekly scheduler refreshes the most recent six-year window within that interval. Full historical reconciliations use the same manual command. Scheduled execution is disabled by default and is always suppressed in one-shot import processes.
 

@@ -8,7 +8,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 
 @ConfigurationProperties("atlas.import")
 public record ImportProperties(
-    @DefaultValue({"BRA", "USA", "CHN", "RUS", "DEU", "JPN", "GBR", "FRA", "IND"}) List<String> countries,
+    @DefaultValue({"ARG", "AUS", "BRA", "CAN", "CHL", "CHN", "FRA", "HKG", "ISR", "ITA", "JPN", "PRY",
+        "POL", "PRT", "RUS", "SGP", "KOR", "ESP", "CHE", "UKR", "GBR", "USA", "VEN", "VNM"}) List<String> countries,
     @DefaultValue("1960") int fromYear,
     @DefaultValue("0") int toYear) {
     public ImportProperties {
