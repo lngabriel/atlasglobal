@@ -8,6 +8,10 @@ import java.util.List;
 public final class ProviderData {
     private ProviderData() {}
 
+    public record Source(String code, String name, String baseUrl, String description,
+                         String documentationUrl) {}
+    public record Series(String code, String name, String category, String unit, String datasetCode) {}
+
     public record Country(String iso2, String iso3, String name, String originalName,
                           String region, String incomeLevel, String capital,
                           BigDecimal latitude, BigDecimal longitude) {}

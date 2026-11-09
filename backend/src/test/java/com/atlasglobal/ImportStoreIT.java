@@ -92,4 +92,21 @@ class ImportStoreIT {
         return new ProviderData.Batch(List.of(new ProviderData.Observation("ZZZ", indicator, Integer.parseInt(year),
             value == null ? null : new BigDecimal(value), "")), LocalDate.of(2026, 10, 8));
     }
+
+    @Test
+    void separatesProviderDatasetsAndPurchasingPowerBasesWithoutChangingExistingValues() {
+        UUID source = store.ensureSource(new ProviderData.Source("TEST_OECD", "Test official provider",
+            "https://example.test/", "Test annual datasets", "https://example.test/docs"));
+        var metadata = new ProviderData.Indicator("WAGE.PPP", "Annual wages", "Constant-price PPP wages", "Test provider");
+        var oldBase = new ProviderData.Series("TEST.WAGE.PPP", "Test annual wage", "ECONOMY", "USD_PPP_2024_ANNUAL", "WAGE:2024");
+        var newBase = new ProviderData.Series("TEST.WAGE.PPP", "Test annual wage", "ECONOMY", "USD_PPP_2025_ANNUAL", "WAGE:2025");
+        UUID original = store.series(source, oldBase, metadata);
+        UUID revised = store.series(source, newBase, metadata);
+        assertThat(original).isNotEqualTo(revised);
+        assertThat(store.series(source, newBase, metadata)).isEqualTo(revised);
+        assertThat(jdbc.queryForObject("SELECT unit FROM indicator_series WHERE id = ?", String.class, original))
+            .isEqualTo("USD_PPP_2024_ANNUAL");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM indicator WHERE code = 'TEST.WAGE.PPP'", Integer.class))
+            .isEqualTo(1);
+    }
 }

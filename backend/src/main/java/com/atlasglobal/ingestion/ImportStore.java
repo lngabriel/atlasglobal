@@ -18,14 +18,17 @@ public class ImportStore {
     public ImportStore(JdbcTemplate jdbc) { this.jdbc = jdbc; }
 
     public UUID ensureSource() {
+        return ensureSource(new ProviderData.Source("WORLD_BANK", "World Bank", "https://api.worldbank.org/v2/",
+            "World Development Indicators", "https://datahelpdesk.worldbank.org/knowledgebase/articles/889392"));
+    }
+
+    public UUID ensureSource(ProviderData.Source source) {
         jdbc.update("""
             INSERT INTO data_source (id, code, name, base_url, description, documentation_url)
-            VALUES (?, 'WORLD_BANK', 'World Bank', 'https://api.worldbank.org/v2/',
-                'World Development Indicators',
-                'https://datahelpdesk.worldbank.org/knowledgebase/articles/889392')
+            VALUES (?, ?, ?, ?, ?, ?)
             ON CONFLICT (code) DO NOTHING
-            """, UUID.randomUUID());
-        return jdbc.queryForObject("SELECT id FROM data_source WHERE code = 'WORLD_BANK'", UUID.class);
+            """, UUID.randomUUID(), source.code(), source.name(), source.baseUrl(), source.description(), source.documentationUrl());
+        return jdbc.queryForObject("SELECT id FROM data_source WHERE code = ?", UUID.class, source.code());
     }
 
     public UUID start(UUID source, String scope) {
@@ -61,6 +64,11 @@ public class ImportStore {
 
     @Transactional
     public UUID series(UUID source, WorldBankCatalog.Entry entry, ProviderData.Indicator metadata) {
+        return series(source, new ProviderData.Series(entry.code(), entry.name(), entry.category(), entry.unit(), "2"), metadata);
+    }
+
+    @Transactional
+    public UUID series(UUID source, ProviderData.Series entry, ProviderData.Indicator metadata) {
         jdbc.update("""
             INSERT INTO indicator (id, code, name, description, category) VALUES (?, ?, ?, ?, ?)
             ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description,
@@ -70,21 +78,21 @@ public class ImportStore {
         int updated = jdbc.update("""
             INSERT INTO indicator_series (id, indicator_id, data_source_id, external_code, dataset_code,
                 original_name, methodology, source_organization, unit, frequency)
-            VALUES (?, ?, ?, ?, '2', ?, ?, ?, ?, 'ANNUAL')
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ANNUAL')
             ON CONFLICT (data_source_id, dataset_code, external_code) DO UPDATE SET
                 original_name = EXCLUDED.original_name, methodology = EXCLUDED.methodology,
                 source_organization = EXCLUDED.source_organization
             WHERE indicator_series.indicator_id = EXCLUDED.indicator_id
                 AND indicator_series.unit = EXCLUDED.unit
                 AND indicator_series.frequency = EXCLUDED.frequency
-            """, UUID.randomUUID(), indicator, source, entry.code(), metadata.originalName(),
+            """, UUID.randomUUID(), indicator, source, metadata.externalCode(), entry.datasetCode(), metadata.originalName(),
             metadata.methodology(), metadata.sourceOrganization(), entry.unit());
         if (updated != 1) {
             throw new DataIntegrityViolationException("Existing series has an incompatible indicator, unit, or frequency");
         }
         return jdbc.queryForObject("""
-            SELECT id FROM indicator_series WHERE data_source_id = ? AND dataset_code = '2' AND external_code = ?
-            """, UUID.class, source, entry.code());
+            SELECT id FROM indicator_series WHERE data_source_id = ? AND dataset_code = ? AND external_code = ?
+            """, UUID.class, source, entry.datasetCode(), metadata.externalCode());
     }
 
     @Transactional
