@@ -19,7 +19,7 @@ export interface Country {
   longitude: number | null
 }
 
-export type Category = 'ECONOMY' | 'DEMOGRAPHY' | 'EDUCATION' | 'HEALTH' | 'ENVIRONMENT' | 'TECHNOLOGY'
+export type Category = 'ECONOMY' | 'DEMOGRAPHY' | 'EDUCATION' | 'HEALTH' | 'ENVIRONMENT' | 'TECHNOLOGY' | 'INEQUALITY' | 'SAFETY' | 'MIGRATION'
 
 export interface Indicator {
   id: string
@@ -48,6 +48,7 @@ export interface Series {
   unit: string
   frequency: string
   source: Source
+  comparison?: { allowed: boolean; note: string }
 }
 
 export interface Observation {
@@ -89,7 +90,7 @@ const errorMessages: Record<number, string> = {
   400: 'Os parâmetros da consulta são inválidos. Revise os filtros e tente novamente.',
   404: 'O país ou a série solicitada não foi encontrado.',
   408: 'A consulta demorou mais que o esperado. Tente novamente.',
-  409: 'Este indicador possui mais de uma série. Selecione a fonte e a definição desejadas.',
+  409: 'A série exige uma seleção explícita ou não permite esta comparação. Confira a fonte, a unidade e a metodologia.',
   429: 'O serviço recebeu muitas consultas. Aguarde um momento e tente novamente.',
 }
 
@@ -179,30 +180,78 @@ export function getCountryIndicators(code: string, signal?: AbortSignal): Promis
   }, signal))
 }
 
-/** Returns the complete selected interval, never only its first API page. */
-export async function getHistory(countryCode: string, indicatorCode: string, seriesId: string,
+export interface IndicatorDetails {
+  indicator: Indicator
+  series: Series[]
+}
+
+export interface Overview {
+  scope: { code: string; name: string }
+  indicators: {
+    indicator: Indicator
+    series: Series
+    latestAvailable: Omit<Observation, 'countryCode'> | null
+    latestReported: Omit<Observation, 'countryCode'> | null
+  }[]
+}
+
+export function getIndicators(signal?: AbortSignal): Promise<Indicator[]> {
+  return collectPages(page => get('/indicators', { page, size: 100, sort: 'name', direction: 'asc' }, signal))
+}
+
+export function getIndicator(code: string, signal?: AbortSignal): Promise<IndicatorDetails> {
+  return get(`/indicators/${segment(code)}`, {}, signal)
+}
+
+export function getOverview(signal?: AbortSignal): Promise<Overview> {
+  return get('/overview', {}, signal)
+}
+
+/** Collects complete single-series history without mixing countries, definitions, or units. */
+async function loadHistory(path: string, countries: string[], indicatorCode: string, seriesId: string,
   from: number, to: number, signal?: AbortSignal): Promise<History> {
   let metadata: History | undefined
+  const expectedCountries = new Set(countries.map(code => code.toUpperCase()))
   const content = await collectPages<Observation>(async page => {
-    const history = await get<History>(`/countries/${segment(countryCode)}/indicators/${segment(indicatorCode)}`, {
+    const history = await get<History>(path, {
+      countries: countries.length > 1 ? countries.join(',') : undefined,
       seriesId, from, to, page, size: 100, sort: 'period', direction: 'asc',
     }, signal)
     if (!metadata) metadata = history
-    if (history.series.id !== seriesId || history.indicator.code !== metadata.indicator.code
+    if (history.series.id !== seriesId || history.indicator.code !== indicatorCode.toUpperCase()
+      || history.series.unit !== metadata.series.unit || history.series.datasetCode !== metadata.series.datasetCode
+      || history.series.source.id !== metadata.series.source.id || history.series.frequency !== metadata.series.frequency
       || history.from !== from || history.to !== to
-      || history.countries.length !== 1 || history.countries[0]?.iso3Code !== countryCode.toUpperCase()) {
+      || history.countries.length !== expectedCountries.size
+      || new Set(history.countries.map(country => country.iso3Code)).size !== expectedCountries.size
+      || history.countries.some(country => !expectedCountries.has(country.iso3Code))) {
       throw new ApiError(502)
     }
     return history.observations
   })
-  const periods = new Set<number>()
+  const keys = new Set<string>()
   for (const observation of content) {
-    if (observation.countryCode !== countryCode.toUpperCase() || !Number.isInteger(observation.period)
-      || observation.period < from || observation.period > to || periods.has(observation.period)) {
+    const key = `${observation.countryCode}:${observation.period}`
+    if (!expectedCountries.has(observation.countryCode) || !Number.isInteger(observation.period)
+      || observation.period < from || observation.period > to || keys.has(key)) {
       throw new ApiError(502)
     }
-    periods.add(observation.period)
+    keys.add(key)
   }
   if (!metadata) throw new ApiError(502)
   return { ...metadata, observations: { content, page: 0, size: content.length, totalElements: content.length, totalPages: content.length ? 1 : 0 } }
+}
+
+export function getHistory(countryCode: string, indicatorCode: string, seriesId: string,
+  from: number, to: number, signal?: AbortSignal): Promise<History> {
+  return loadHistory(`/countries/${segment(countryCode)}/indicators/${segment(indicatorCode)}`,
+    [countryCode], indicatorCode, seriesId, from, to, signal)
+}
+
+export function getComparisonHistory(countries: string[], indicatorCode: string, seriesId: string,
+  from: number, to: number, signal?: AbortSignal): Promise<History> {
+  const codes = countries.map(code => code.trim().toUpperCase())
+  if (codes.length < 2 || codes.length > 5 || new Set(codes).size !== codes.length
+    || codes.some(code => !/^[A-Z0-9]{3}$/.test(code))) return Promise.reject(new ApiError(400))
+  return loadHistory(`/indicators/${segment(indicatorCode)}/history`, codes, indicatorCode, seriesId, from, to, signal)
 }

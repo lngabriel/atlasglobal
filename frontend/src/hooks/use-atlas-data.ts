@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { getCountries, getCountry, getCountryCatalog, getCountryIndicators, getHistory } from '@/services/api'
+import { getCountries, getCountry, getCountryCatalog, getCountryIndicators, getHistory,
+  getIndicators, getIndicator, getComparisonHistory, getOverview } from '@/services/api'
 import type { CountryFilters } from '@/services/api'
 
 export function useCountries(filters: CountryFilters = {}) {
@@ -48,4 +49,32 @@ export function useHistory(code: string, indicatorCode: string | undefined, seri
     enabled: Boolean(normalized && indicatorCode && seriesId)
       && Number.isInteger(from) && Number.isInteger(to) && from >= 1800 && to <= 2200 && from <= to,
   })
+}
+
+export function useIndicators() {
+  return useQuery({ queryKey: ['indicators'], queryFn: ({ signal }) => getIndicators(signal) })
+}
+
+export function useIndicator(code: string | undefined) {
+  const normalized = code?.toUpperCase()
+  return useQuery({
+    queryKey: ['indicator', normalized],
+    queryFn: ({ signal }) => getIndicator(normalized!, signal),
+    enabled: Boolean(normalized),
+  })
+}
+
+export function useComparisonHistory(codes: string[], indicatorCode: string | undefined,
+  seriesId: string | undefined, from: number, to: number) {
+  return useQuery({
+    queryKey: ['comparison-history', codes, indicatorCode, seriesId, from, to],
+    queryFn: ({ signal }) => getComparisonHistory(codes, indicatorCode!, seriesId!, from, to, signal),
+    enabled: codes.length >= 2 && codes.length <= 5 && new Set(codes).size === codes.length
+      && Boolean(indicatorCode && seriesId) && Number.isInteger(from) && Number.isInteger(to)
+      && from >= 1800 && to <= 2200 && from <= to,
+  })
+}
+
+export function useOverview() {
+  return useQuery({ queryKey: ['overview'], queryFn: ({ signal }) => getOverview(signal), staleTime: 5 * 60_000 })
 }
