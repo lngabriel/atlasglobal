@@ -184,6 +184,8 @@ class IndicatorObservationApiIT {
     void documentsOnlyReadOperationsAndKeepsOperationalRoutesPrivate() throws Exception {
         String body = mvc.perform(get("/api/openapi")).andExpect(status().isOk())
             .andExpect(jsonPath("$.info.title").value("Atlas Global API"))
+            .andExpect(jsonPath("$.paths['/api/v1/countries/{iso3Code}'].get.responses['400'].content['application/problem+json'].schema.properties.status.type").value("integer"))
+            .andExpect(jsonPath("$.paths['/api/v1/countries/{iso3Code}'].get.responses['200'].content['application/json'].schema").exists())
             .andExpect(jsonPath("$.paths['/api/v1/indicators/{indicatorCode}/history'].get.responses['409']").exists())
             .andReturn().getResponse().getContentAsString();
         var document = new ObjectMapper().readTree(body);

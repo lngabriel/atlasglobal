@@ -60,8 +60,10 @@ logging:
     format:
       console: ecs
 springdoc:
+  default-produces-media-type: application/json
   paths-to-match: /api/v1/**
   api-docs:
+    version: OPENAPI_3_0
     path: /api/openapi
   swagger-ui:
     path: /api/docs

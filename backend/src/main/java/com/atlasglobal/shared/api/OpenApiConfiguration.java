@@ -31,6 +31,7 @@ class OpenApiConfiguration {
                 .addProperty("detail", new Schema<>().type("string"))
                 .addProperty("instance", new Schema<>().type("string"));
             addError(operation, "400", "Parâmetros inválidos", problem);
+            addError(operation, "500", "Falha interna com mensagem pública genérica", problem);
             if (route.contains("{")) addError(operation, "404", "Recurso não encontrado", problem);
             if (route.endsWith("/history") || (route.startsWith("/api/v1/countries/")
                     && route.endsWith("/indicators/{indicatorCode}"))) {
@@ -42,7 +43,7 @@ class OpenApiConfiguration {
     private void addError(io.swagger.v3.oas.models.Operation operation, String code, String description, Schema<?> problem) {
         var existing = operation.getResponses().get(code);
         if (existing == null) operation.getResponses().addApiResponse(code, response(description, problem));
-        else if (existing.getContent() == null) existing.setContent(response(description, problem).getContent());
+        else existing.setContent(response(description, problem).getContent());
     }
 
     private ApiResponse response(String description, Schema<?> problem) {
