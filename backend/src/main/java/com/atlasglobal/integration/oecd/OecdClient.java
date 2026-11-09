@@ -5,7 +5,6 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -39,7 +38,9 @@ class OecdClient {
             throw new IllegalArgumentException("Invalid OECD observation request");
         }
         ResponseEntity<String> response = request(entry, from, to);
-        return decode(entry, response.getBody(), Set.copyOf(countries), from, to, sourceDate(response.getHeaders()));
+        // The OECD Last-Modified header also appears on dataflow structures and predates
+        // newer observations. It is not a validated statistical revision date.
+        return decode(entry, response.getBody(), Set.copyOf(countries), from, to, null);
     }
 
     private ResponseEntity<String> request(OecdCatalog.Entry entry, int from, int to) {
@@ -82,13 +83,6 @@ class OecdClient {
             Thread.currentThread().interrupt();
             throw new OecdException("OECD request interrupted", ex);
         }
-    }
-
-    private static LocalDate sourceDate(HttpHeaders headers) {
-        String modified = headers.getFirst(HttpHeaders.LAST_MODIFIED);
-        if (modified == null) return null;
-        try { return ZonedDateTime.parse(modified, DateTimeFormatter.RFC_1123_DATE_TIME).withZoneSameInstant(ZoneOffset.UTC).toLocalDate(); }
-        catch (DateTimeParseException ex) { throw new OecdException("Invalid OECD source modification date", ex); }
     }
 
     static List<ImportedSeries> decode(OecdCatalog.Entry entry, String body, Set<String> countries,

@@ -1,7 +1,6 @@
 package com.atlasglobal.integration.oecd;
 
 import java.time.Duration;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,7 +29,7 @@ class OecdClientTest {
     }
 
     @Test
-    void preservesExactDecimalsMissingZeroAndSourceDate() {
+    void preservesExactDecimalsMissingZeroWithoutInferringAnObservationUpdateDate() {
         String csv = HEADER + wage("USA", 2023, "0", "2025", "A", "0")
             + wage("USA", 2024, "", "", "M", "0")
             + wage("USA", 2025, "72018.439", "2025", "P", "0");
@@ -40,13 +39,25 @@ class OecdClientTest {
         var result = client.series(AVERAGE, List.of("USA"), 2023, 2025).getFirst();
         assertThat(result.definition().unit()).isEqualTo("USD_PPP_2025_ANNUAL");
         assertThat(result.definition().datasetCode()).isEqualTo("DSD_EARNINGS@AV_AN_WAGE:2025");
-        assertThat(result.batch().sourceUpdatedAt()).isEqualTo(LocalDate.of(2026, 11, 9));
+        assertThat(result.batch().sourceUpdatedAt()).isNull();
         assertThat(result.batch().observations()).hasSize(3);
         assertThat(result.batch().observations().getFirst().value()).isZero();
         assertThat(result.batch().observations().get(1).value()).isNull();
         assertThat(result.batch().observations().getLast().value()).isEqualByComparingTo("72018.439");
         assertThat(result.batch().observations().getLast().providerStatus()).isEqualTo("P");
         assertThat(result.metadata().methodology()).contains("full-time", "2025", "not monthly");
+        server.verify();
+    }
+
+    @Test
+    void acceptsTheLiveIsoResourceDateWithoutUsingItAsAStatisticalRevisionDate() {
+        server.expect(requestTo(containsString("/data/")))
+            .andRespond(withSuccess(HEADER + wage("USA", 2025, "72018.439", "2025", "A", "0"), MediaType.valueOf("text/csv"))
+                .header("Last-Modified", "2023-11-14"));
+        var imported = client.series(AVERAGE, List.of("USA"), 2023, 2025).getFirst();
+        assertThat(imported.batch().sourceUpdatedAt()).isNull();
+        assertThat(imported.batch().observations().getFirst().year()).isEqualTo(2025);
+        assertThat(imported.batch().observations().getFirst().value()).isEqualByComparingTo("72018.439");
         server.verify();
     }
 
