@@ -43,12 +43,11 @@ export function HistoryChart({ observations, from, to, unit }: {
           <XAxis dataKey="period" type="number" domain={from === to ? [from - .5, to + .5] : [from, to]} ticks={ticks} allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }} tickMargin={12} minTickGap={22} />
           <YAxis width={62} tickFormatter={value => formatAxisValue(Number(value), unit)} axisLine={false} tickLine={false} tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }} tickMargin={8} domain={['auto', 'auto']} />
           <Tooltip content={<ChartTooltip unit={unit} />} filterNull={false} cursor={{ stroke: 'var(--muted-foreground)', strokeWidth: 1, strokeDasharray: '3 3' }} />
-          <Line type="linear" dataKey="value" stroke="var(--foreground)" strokeWidth={1.8} connectNulls={false} dot={points.length <= 3 ? { r: 3, strokeWidth: 0 } : { r: 1.7, strokeWidth: 0 }} activeDot={{ r: 4, strokeWidth: 2, stroke: 'var(--background)' }} isAnimationActive={false} />
+          <Line type="linear" dataKey="value" stroke="var(--foreground)" strokeWidth={1.8} connectNulls={false} dot={{ r: points.length <= 3 ? 3 : 1.4, strokeWidth: 0, fill: 'var(--foreground)' }} activeDot={{ r: 4, strokeWidth: 2, stroke: 'var(--background)', fill: 'var(--foreground)' }} isAnimationActive={false} />
         </LineChart>
       </ResponsiveContainer>
     </div>}
     <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 text-xs leading-5 text-muted-foreground">
-      <p>Dados anuais. As lacunas representam valores indisponíveis.</p>
       <details className="w-full border-t border-border pt-3">
         <summary className="w-fit cursor-pointer font-medium text-foreground underline-offset-4 hover:underline">Ver dados em tabela</summary>
         <div className="mt-3 max-h-72 overflow-auto overscroll-contain border-b border-border" tabIndex={0} aria-label="Tabela de dados históricos, área de rolagem">

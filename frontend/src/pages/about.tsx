@@ -1,11 +1,18 @@
 export function AboutPage() {
-  return <article className="mx-auto max-w-3xl px-6 py-16 md:py-24">
-    <p className="text-sm font-medium text-primary">Sobre o projeto</p>
-    <h1 className="mt-4 text-4xl font-semibold tracking-tight">Dados públicos para ampliar a compreensão do mundo.</h1>
-    <p className="mt-7 leading-8 text-muted-foreground">O Atlas Global está sendo desenvolvido para explorar indicadores internacionais de economia, demografia, educação, saúde, meio ambiente e tecnologia. O acesso será sempre público e gratuito.</p>
-    <h2 className="mt-10 text-xl font-semibold">Fontes públicas e oficiais</h2>
-    <p className="mt-3 leading-8 text-muted-foreground">O Atlas Global utiliza o World Bank como fonte de indicadores anuais. As séries preservam as definições originais, as unidades e a data de atualização da fonte. A disponibilidade varia conforme o país e o indicador.</p>
-    <h2 className="mt-10 text-xl font-semibold">Compromisso com o contexto</h2>
-    <p className="mt-3 leading-8 text-muted-foreground">Fonte, unidade e período são essenciais para interpretar um indicador. Valores ausentes são preservados como indisponíveis e nunca substituídos por zero.</p>
+  return <article className="mx-auto max-w-3xl px-6 py-12 sm:py-16">
+    <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Sobre o Atlas Global</p>
+    <h1 className="editorial-title mt-4 text-3xl leading-tight sm:text-4xl">Dados públicos para ampliar a compreensão do mundo.</h1>
+    <p className="mt-7 text-base leading-8 text-muted-foreground">O Atlas Global reúne indicadores internacionais em uma interface pública e gratuita. Explore a economia, a população, a saúde e o acesso à tecnologia de cada país, com os dados e seu contexto sempre próximos.</p>
+    <section className="mt-10 border-t border-border pt-7"><h2 className="text-base font-semibold">Fontes identificadas, definições preservadas</h2>
+      <p className="mt-3 text-sm leading-7 text-muted-foreground">Os indicadores anuais vêm do World Bank, por meio do conjunto World Development Indicators. Cada série informa sua unidade, definição original, organização de origem e data de atualização. O catálogo inclui países e economias, sem agregados regionais.</p>
+      <a className="text-link mt-3 inline-block text-sm" href="https://datahelpdesk.worldbank.org/knowledgebase/articles/889392" target="_blank" rel="noreferrer">Consultar a documentação do World Bank ↗</a>
+    </section>
+    <section className="mt-8 border-t border-border pt-7"><h2 className="text-base font-semibold">Ausência também é informação</h2>
+      <p className="mt-3 text-sm leading-7 text-muted-foreground">A disponibilidade varia por país, indicador e período. Valores ausentes nunca são substituídos por zero. Os gráficos preservam lacunas e as tabelas distinguem valores não informados pela fonte de anos sem registro importado. O último valor de uma série pode pertencer a um ano diferente do de outra.</p>
+    </section>
+    <section className="mt-8 border-t border-border pt-7"><h2 className="text-base font-semibold">Transparência e acesso livre</h2>
+      <p className="mt-3 text-sm leading-7 text-muted-foreground">O projeto tem código aberto e não exige cadastro. As consultas usam dados previamente coletados e armazenados; a data de coleta é exibida junto à atualização da fonte. Revisões na origem podem alterar valores históricos.</p>
+      <div className="mt-4 flex flex-wrap gap-5 text-sm"><a className="text-link" href="https://github.com/lngabriel/atlasglobal" target="_blank" rel="noreferrer">Repositório no GitHub ↗</a><a className="text-link" href="/api/docs">Documentação da API ↗</a><a className="text-link" href="https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets" target="_blank" rel="noreferrer">Termos de uso dos dados ↗</a></div>
+    </section>
   </article>
 }
