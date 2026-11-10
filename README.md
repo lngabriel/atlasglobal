@@ -2,14 +2,14 @@
 
 [GitHub](https://github.com/lngabriel/atlasglobal)
 
-Atlas Global is an open-source platform for exploring public international data. Its backend imports World Bank and OECD statistics, complemented by national series from IBGE and Banco Central do Brasil, into PostgreSQL. Dated policy rates use official BCB, BIS, and National Bank of Ukraine sources. Each series preserves its definition, unit, price basis, reference period, provenance, and missing values. Access is public and free, without accounts or authentication.
+Atlas Global is an open-source platform for exploring public international data. Its backend imports World Bank, IMF, OECD, UNDP, and Eurostat statistics, complemented by national series from IBGE and Banco Central do Brasil, into PostgreSQL. Dated policy rates use official BCB, BIS, and National Bank of Ukraine sources. Each series preserves its definition, unit, publication edition, reference period, provenance, and missing values. Official projections and provisional values are identified explicitly. Access is public and free, without accounts or authentication.
 
 The home page presents a focused selection of 25 countries and territories, published world aggregates, and access to country comparison. Country profiles combine indicator summaries, historical charts, and source documentation. Rankings use a single reference year with explicit coverage; the world map provides geographic navigation. Historical data and comparisons can be downloaded as CSV. The responsive editorial interface supports light and dark themes and uses Brazilian Portuguese; the public REST API also supports independent clients.
 
 ## Stack
 
 - **Backend:** Java 21, Spring Boot 3, Spring Web, Spring Data JPA, Hibernate, Validation, Actuator, and Springdoc OpenAPI.
-- **Data:** PostgreSQL 17 and Flyway, with World Bank, OECD, IBGE, BCB, BIS, and NBU adapters and transactional imports.
+- **Data:** PostgreSQL 17 and Flyway, with World Bank, IMF, OECD, UNDP, Eurostat, IBGE, BCB, BIS, and NBU adapters and transactional imports.
 - **Frontend:** React, TypeScript, Vite, Tailwind CSS, shadcn/ui, React Router, TanStack Query, Recharts 3, and React Leaflet 5 with Leaflet 1.9.
 - **Runtime:** Docker Compose, with separate backend, frontend, and database services.
 
@@ -33,7 +33,7 @@ docker compose ps
 
 Open **http://localhost:3000**. The database and its configured owner are created automatically when the PostgreSQL volume is initialized. Flyway applies and validates migrations when the backend starts.
 
-A new database has no imported observations. Run the [World Bank import command](#import-world-bank-data) first to populate the country catalog, world highlights, and WDI histories. Run the [OECD import](#import-oecd-data) and [Brazilian national imports](#import-brazilian-national-data) for their additional series. The interface reports unavailable data without substituting example values.
+A new database has no imported observations. Run the [World Bank import command](#import-world-bank-data) first to populate the country catalog, world highlights, and WDI histories. Then run the [OECD import](#import-oecd-data), [additional international imports](#import-imf-undp-and-eurostat-data), [Brazilian national imports](#import-brazilian-national-data), and [policy-rate import](#import-policy-rates) for their respective series. The interface reports unavailable data without substituting example values.
 
 To stop the services while preserving database contents:
 
@@ -126,7 +126,7 @@ docker compose run --rm --no-deps backend \
   --atlas.import.to-year=2024
 ```
 
-The process exits after importing and returns a nonzero exit code on failure. Scheduled jobs are disabled in any provider's one-shot process, even when scheduling is enabled in the environment. The World Bank, OECD, IBGE, BCB, and policy-rate one-shot flags are mutually exclusive; run one command per process. Repeating a command updates existing observations without creating duplicates. Previously stored periods outside the requested interval remain unchanged.
+The process exits after importing and returns a nonzero exit code on failure. Scheduled jobs are disabled in any provider's one-shot process, even when scheduling is enabled in the environment. All eight one-shot flags are mutually exclusive: World Bank, OECD, IBGE, BCB, policy rates, IMF, UNDP, and Eurostat. Run one command per process. Repeating a command updates existing observations without creating duplicates. Previously stored periods outside the requested interval remain unchanged.
 
 World Bank scheduled refreshes are disabled by default. Set `WORLD_BANK_SCHEDULE_ENABLED=true` to enable a weekly refresh at 03:00 UTC on Sunday. This schedule refreshes World Bank data only, covering the last six calendar years through the configured end year; run a full historical import periodically to capture older revisions. OECD, IBGE, and the annual BCB household-debt import are manual. `WORLD_BANK_IMPORT_CRON` accepts a Spring six-field cron expression. Dated policy rates have a separate daily schedule described below.
 
@@ -154,6 +154,34 @@ It imports three annual OECD definitions: average wages, real statutory minimum 
 The wage series use annual pay periods and constant US dollars at purchasing-power parity. The provider's price base is included in the stored unit and dataset identity; rebased observations form a separate series. Average wages refer to gross annual remuneration per full-time-equivalent dependent employee, while minimum wages refer to statutory annual amounts. Household debt is measured against net disposable income and includes non-profit institutions serving households. Country coverage differs between these measures.
 
 The command records its execution and exits after completion. Repeating it updates matching observations without duplicating country/series/year keys. It does not run automatically on ordinary application startup, and the optional World Bank scheduler does not refresh OECD data.
+
+## Import IMF, UNDP, and Eurostat data
+
+After importing the country catalog, run each provider separately:
+
+```bash
+docker compose run --rm --no-deps backend \
+  --spring.main.web-application-type=none \
+  --atlas.imf-import.run-once=true
+
+docker compose run --rm --no-deps backend \
+  --spring.main.web-application-type=none \
+  --atlas.un-import.run-once=true
+
+docker compose run --rm --no-deps backend \
+  --spring.main.web-application-type=none \
+  --atlas.eurostat-import.run-once=true
+```
+
+These commands share `atlas.import.countries`, `atlas.import.from-year`, and `atlas.import.to-year`. They need no API credentials and never replace another provider's definition. Taiwan can be requested explicitly for IMF imports, for example `--atlas.import.countries=BRA,USA,TWN`; it remains unavailable in the selected UNDP publication and WDI series.
+
+- **IMF:** general government gross debt and current-account balance, in percent of GDP, from DataMapper v2. Native publication metadata identifies the WEO edition and first projection year. Current-year projections are labeled in profiles, charts, tables, comparisons, rankings, and CSV; earlier WEO records can also contain official staff estimates.
+- **UNDP:** HDI and inequality-adjusted HDI, on their original 0–1 scale. The adapter discovers the current public composite-index download from the official publication page. Report editions remain separate; the release year is not the observation year. The DataPRISM API requires registration, so this integration uses the official public CSV without an API key.
+- **Eurostat:** Maastricht general government debt and the renewable-energy share of gross final energy consumption. Exact annual dimensions and native provisional, estimate, and break flags are retained. European geographic coverage is partial; unavailable countries receive no substitute values.
+
+The optional additional-source schedule refreshes the last six calendar years within the configured interval at **05:00 UTC on Saturdays**. Enable it with `ADDITIONAL_SOURCES_SCHEDULE_ENABLED=true`; configure `ADDITIONAL_SOURCES_IMPORT_CRON` if needed. It does not perform an immediate initial import. Run full historical commands periodically, including after a new IMF or UNDP edition, to populate earlier periods and capture older revisions.
+
+See the [IMF](docs/integrations/imf.md), [UNDP](docs/integrations/un-development.md), and [Eurostat](docs/integrations/eurostat.md) references for exact source contracts, coverage, and interpretation. Their persisted series are available through the existing history, comparison, ranking, and CSV endpoints.
 
 ## Import Brazilian national data
 
@@ -200,7 +228,7 @@ curl --fail 'http://localhost:3000/api/v1/policy-rates/history?countries=BRA,USA
 
 ## Data sources and coverage
 
-The annual import catalogs define **30 indicators: 24 from World Development Indicators (WDI source 2), three from the OECD, two from IBGE, and one from BCB**. Policy rate is an additional dated measure (`POLICY.RATE`) with a separate daily model and API. An indicator definition does not imply that every country or period has a value.
+The annual import catalogs define **36 indicators: 24 from World Development Indicators (WDI source 2), three from the OECD, two each from IMF, UNDP, Eurostat, and IBGE, and one from BCB**. Policy rate is an additional dated measure (`POLICY.RATE`) with a separate daily model and API. An indicator definition does not imply that every country or period has a value.
 
 | Subject | Integrated measures |
 | --- | --- |
@@ -212,6 +240,9 @@ The annual import catalogs define **30 indicators: 24 from World Development Ind
 | Wages and household finances | OECD average annual wages, real annual minimum wages, and household debt relative to net disposable income. |
 | Brazilian national series | IBGE Gini coefficient and real monthly household income per person; BCB household indebtedness in December relative to restricted RNDBF accumulated over twelve months. |
 | Monetary policy | Daily policy instruments from BCB, BIS, and NBU, in percent per year, with original dates and national methodologies. |
+| Macroeconomic accounts | IMF general government gross debt and current-account balance, in percent of GDP, with historical/projection classifications. |
+| Human development | UNDP HDI and inequality-adjusted HDI, as distinct 0–1 indices with report editions. |
+| European statistics | Eurostat Maastricht government debt and renewable energy in gross final consumption, with native observation flags. |
 
 [World Bank Indicators API v2](https://datahelpdesk.worldbank.org/knowledgebase/articles/889392) supplies the WDI data, including original source-organization metadata. [OECD SDMX](https://www.oecd.org/en/data/insights/data-explainers/2024/09/api.html) supplies the earnings and household-debt series. The [IBGE Aggregates API](https://servicodados.ibge.gov.br/api/docs/agregados?versao=3) and [BCB SGS](https://dadosabertos.bcb.gov.br/) supply the national definitions. Query endpoints read persisted data rather than calling these providers.
 
@@ -285,6 +316,8 @@ java -jar backend/target/atlas-global-0.1.0-SNAPSHOT.jar \
 | `WORLD_BANK_TO_YEAR` | Last import year; 0 means the current UTC year. The BCB December series ends at the latest completed calendar year. |
 | `WORLD_BANK_SCHEDULE_ENABLED` | Enables scheduled imports, default `false`. |
 | `WORLD_BANK_IMPORT_CRON` | Refresh schedule, default `0 0 3 * * SUN`, evaluated in UTC. |
+| `ADDITIONAL_SOURCES_SCHEDULE_ENABLED` | Enables the IMF, UNDP, and Eurostat six-year refresh, default `false`. |
+| `ADDITIONAL_SOURCES_IMPORT_CRON` | Additional-source schedule, default `0 0 5 * * SAT`, evaluated in UTC. |
 | `POLICY_RATE_FROM` | First policy-rate import date, default `2010-01-01`. |
 | `POLICY_RATE_SCHEDULE_ENABLED` | Daily policy-rate refresh: default `true` in Compose, `false` for local Java execution. |
 | `POLICY_RATE_IMPORT_CRON` | Policy-rate schedule, default `0 0 4 * * *`, evaluated in UTC. |
@@ -363,4 +396,4 @@ infrastructure/  Local runtime configuration guidance
 docs/            Technical architecture, data model, and provider documentation
 ```
 
-Technical references: [API reference](docs/api.md), [architecture](docs/architecture/foundation.md), [data model](docs/data-model.md), [coverage and comparability](docs/data-coverage.md), [World Bank integration](docs/integrations/world-bank.md), [Brazilian integrations](docs/integrations/brazil.md), and [policy rates](docs/integrations/policy-rates.md).
+Technical references: [API reference](docs/api.md), [architecture](docs/architecture/foundation.md), [data model](docs/data-model.md), [coverage and comparability](docs/data-coverage.md), [World Bank](docs/integrations/world-bank.md), [IMF](docs/integrations/imf.md), [UNDP](docs/integrations/un-development.md), [Eurostat](docs/integrations/eurostat.md), [Brazilian integrations](docs/integrations/brazil.md), and [policy rates](docs/integrations/policy-rates.md).

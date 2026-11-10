@@ -18,7 +18,7 @@ docker compose run --rm --no-deps backend \
   --atlas.import.countries=BRA
 ```
 
-Both use `atlas.import.from-year` and `atlas.import.to-year`. The configured country list must include `BRA`; additional codes are ignored by the national adapters, which write only Brazilian observations. Neither provider requires an API key. The World Bank, OECD, IBGE, and BCB one-shot flags are mutually exclusive, and any one-shot command suppresses the optional World Bank scheduler. National imports are manual and do not run during normal startup.
+Both use `atlas.import.from-year` and `atlas.import.to-year`. The configured country list must include `BRA`; additional codes are ignored by the national adapters, which write only Brazilian observations. Neither provider requires an API key. All eight one-shot flags described in the [root README](../../README.md) are mutually exclusive, and any one-shot command suppresses every scheduled import. National annual imports are manual and do not run during normal startup.
 
 Each provider has its own PostgreSQL advisory lock and import-history records. Sources, definitions, and observations use the shared transactional store and existing schema. Repeating an import updates the same source/series/year keys without duplicating records. A failed run retains completed batches and sanitized failure history; periods outside the requested interval are not deleted.
 

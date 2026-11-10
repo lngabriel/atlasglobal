@@ -8,7 +8,7 @@ Verified on **2026-11-10** with Java 21.0.13, Maven 3.9.12, PostgreSQL 17.11, No
 mvn -f backend/pom.xml -Pintegration verify
 ```
 
-**126 backend tests passed** — 79 unit/contract tests and 47 PostgreSQL integration tests, with no failures, errors, or skipped tests in the final reports. The full suite completed successfully; the final discontinuation-notice change was additionally verified with the focused policy-rate integration suite. Integration tests used a dedicated database; transactional store tests rolled back their writes.
+**161 backend tests passed** — 107 unit/contract tests and 54 PostgreSQL integration tests, with no failures, errors, or skipped tests. The full suite completed successfully; the eight UNDP contract tests were also rerun after normalizing the recorded fixture's line endings for repository review. Integration tests used a dedicated database; transactional store tests rolled back their writes.
 
 Coverage includes:
 
@@ -22,6 +22,10 @@ Coverage includes:
 - Rankings: one source and reference year, numeric coverage, missing versus zero/negative values, tied positions, stable pagination, empty histories, validation, and blocked national comparisons.
 - CSV: every history page, exact decimals, quoted multiline text, formula-like text prefixing, explicit missing rows, no fabricated absent years, provenance, selection validation, and comparison-policy enforcement.
 - Daily rates: strict BIS SDMX dimensions and instrument metadata, native dates, negative/zero/missing rates, NBU instrument selection and annual request chunk boundaries, BCB SGS 432, HTTP/JSON errors, bounded retries, full-date CSV, transactional idempotent persistence, retained history, source failure auditing, euro-area mapping, national-source priority, discontinued Argentine history, unchanged annual rows, and scheduling isolation.
+- IMF: DataMapper v2 metadata and country validation, exact decimals, current-year projection flags, historical estimates, WEO release identity, Taiwan/Kosovo mappings, bounded local filtering, metadata consistency, and controlled provider errors.
+- UNDP: official publication discovery, Windows-1252 transport, report-edition identity, HDI/IHDI reference columns, native 0–1 values, blank cells, strict CSV, country/aggregate exclusion, encoding/size limits, retries, and unavailable country coverage.
+- Eurostat: explicit JSON-stat dimensions, dataset identity, flattened sparse/dense cells, empty current-year intervals, exact decimals, native provisional flags, country mappings, unsupported geographies, and malformed responses.
+- Shared annual orchestration: catalog prerequisites before upstream calls, source-specific locking, audit failures, idempotency, retained periods, duplicate/out-of-scope rejection, six-year refresh bounds, and projection metadata in public history/ranking/CSV responses. All eight one-shot commands suppress every schedule.
 
 ## Frontend and browser
 
@@ -32,9 +36,9 @@ npm run build
 npm run test:browser
 ```
 
-**69 frontend unit tests passed**, with no failures or skipped tests. TypeScript and the Vite production build passed. Unit coverage includes complete paginated retrieval, cancellation, safe errors, localized units, absent-year gaps, zero versus missing values, annual changes, country search, comparison selection, and latest common-year calculations. National tests preserve three-decimal Gini values and changes, dynamic real-income price bases, and the distinct BCB denominator. Additional contracts cover rankings, CSV transport, local geography, dated rates, common dates, and decimal precision. Inconsistent units, countries, or failed intermediate pages reject the complete history rather than exposing partial data.
+**72 frontend unit tests passed**, with no failures or skipped tests. TypeScript and the Vite production build passed. Unit coverage includes complete paginated retrieval, cancellation, safe errors, localized units, absent-year gaps, zero versus missing values, annual changes, country search, comparison selection, and latest common-year calculations. National tests preserve three-decimal Gini values and changes, dynamic real-income price bases, and the distinct BCB denominator. Additional contracts cover rankings, CSV transport, local geography, dated rates, common dates, projection/provisional labels, three-decimal HDI/renewable values, and absolute index changes. Inconsistent units, countries, or failed intermediate pages reject the complete history rather than exposing partial data.
 
-**68 Chrome checks passed** against the production application served by Nginx at `http://127.0.0.1:3000`, with the documented annual and policy-rate imports loaded:
+**79 Chrome checks passed** against the production application served by Nginx at `http://127.0.0.1:3000`, with the documented annual and policy-rate imports loaded:
 
 - The home directory contains exactly the 25 selected countries and territories, with direct profile links and no emoji flags. Selection search works.
 - All four global highlights match persisted `WLD` values, individual reference years, and source metadata.
@@ -48,6 +52,8 @@ npm run test:browser
 - Rankings match API values, reference years, coverage, order, and absolute positions across pages; invalid national comparisons do not request ranking data.
 - Annual country and comparison CSV files are downloaded and parsed, with their rows checked against the real API rather than only checking that a button responds.
 - Daily policy rates match persisted BCB/BIS values and precision; historical tables, five-year filters, and full-date CSV downloads work. The NBU fallback identifies Ukraine's actual source. Singapore does not substitute SORA for a policy target, and Argentina's discontinued history carries an explicit notice.
+- IMF projection labels appear in country summaries, historical tables, comparisons, rankings, and downloaded CSV. Taiwan's native IMF data is available while its WDI observations remain unavailable.
+- UNDP profiles match actual API values, their reference years, the 0–1 scale, and three-decimal CSV values. Eurostat renewable profiles and exports preserve native precision and provisional flags.
 - The world map selects countries through real polygons, keyboard activation, and the full selector; headline values match persisted API data. Zoom and reset work; microstate selection and unavailable observations remain usable without external tile requests.
 - Home, comparison, and explorer layouts have no page-level horizontal overflow at 1440, 768, 390, and 320 pixels. Mobile country selection preserves visible keyboard focus.
 - Unknown countries/routes and countries without observations show their corresponding recoverable states. No JavaScript exceptions, content policy violations, or unexpected API errors occurred.
@@ -61,26 +67,36 @@ The application database contains completed World Bank and OECD imports. Both ne
 | Stored records | Count |
 | --- | ---: |
 | Country/economy identities | 218 |
-| Indicator definitions | 30 |
-| Source-specific series | 30 |
-| Country observations | 40,541 |
-| Numeric country observations | 22,866 |
-| Explicitly missing country observations | 17,675 |
+| Indicator definitions | 36 |
+| Source-specific annual series | 36 |
+| Country observations | 43,918 |
+| Numeric country observations | 26,235 |
+| Explicitly missing country observations | 17,683 |
 | Published world observations | 264 |
 | Dated policy-rate series | 20 |
 | Daily policy-rate observations | 111,586 |
 | Numeric daily policy-rate observations | 101,689 |
 | Explicitly missing daily policy-rate observations | 9,897 |
 
-All country/series/year keys and world series/year keys are unique. Previously imported Germany and India histories remain present, with 528 records each. Taiwan has a catalog identity and zero invented observations.
+All country/series/year keys and world series/year keys are unique. Previously imported Germany and India histories remain present, with 528 records each. Taiwan has native IMF observations and no invented WDI or UNDP observations.
 
 The OECD execution imported **1,420 records**: 487 average-wage records across 14 selected countries, 601 minimum-wage records across 13, and 332 household-debt records across 13. The wage response reported a 2025 constant-price base, preserved in the stored unit and series identity. All OECD statistical update dates remain null because the response does not establish a validated revision date; independent collection timestamps are present.
 
 The IBGE command imported **28 observations**: 14 annual Gini coefficients and 14 annual real monthly household-income values, covering 2012–2025. The BCB command imported **21 December observations**, covering completed years 2005–2025. Their latest values matched the official responses: Gini 0.511, monthly household income per person R$ 2,264 at 2025 prices, and December household debt 49.70% of restricted RNDBF. See the [Brazilian source reference](integrations/brazil.md).
 
-Annual national observations exist only for Brazil, with no invented statistical revision dates. The 39,072 World Bank and 1,420 OECD country observations remained unchanged in count; the 264 world records remained separate. All 40,541 country/series/year keys are unique.
+Annual national observations exist only for Brazil, with no invented statistical revision dates. The original 40,541 annual observations, including 39,072 World Bank and 1,420 OECD records, were retained. The 264 world records remain separate, and all current country/series/year keys are unique.
 
 The dated-rate commands persisted **6,158 BCB records**, **99,270 BIS records across 18 country definitions**, and **6,158 NBU records**. BCB and NBU cover `2010-01-01` through `2026-11-10`; the latest BIS observation in this import is `2026-11-03`, with country-specific dates retained. Argentina's native BIS history ends on `2025-07-10`, and the source documents that no policy rate was adopted thereafter. No current rate is fabricated for that country. The NBU's first large-response attempt failed without persisted rows; bounded yearly requests then completed successfully, retaining both audit outcomes.
+
+The additional annual imports completed with exit code 0 and `COMPLETED` audits, using the 25 home-selection codes and a 1960–2026 interval:
+
+| Provider | Persisted observations | Detail |
+| --- | ---: | --- |
+| IMF | 1,960 | 830 government-debt and 1,130 current-account records, including 73 native Taiwan records. The October 2026 WEO edition has 49 current-year projections and 1,911 historical records; historical does not assert final actual data. |
+| UNDP | 1,152 | 816 HDI and 336 IHDI cells from HDR 2025; 1,144 numeric values and eight explicit missing cells. HDI covers 1990–2023 and IHDI 2010–2023 in this publication. Taiwan is absent. |
+| Eurostat | 265 | 155 government-debt records (1995–2025) and 110 renewable-energy records (2004–2025), for France, Italy, Poland, Portugal, and Spain. The Swiss geographic category has no value cells in the checked energy response. |
+
+These imports added **3,377 annual observations** without changing the 39,072 WDI, 1,420 OECD, 28 IBGE, or 21 annual BCB records. World and daily policy-rate counts remain unchanged. All 43,918 annual keys are unique, no future observation year is imported, and all three new providers retain null statistical revision dates rather than treating publication/HTTP maintenance dates as observation updates. The new opt-in Saturday 05:00 UTC schedule refreshes the last six calendar years.
 
 Policy-rate series/date keys are unique, no observation is later than the current UTC date, and annual/world observation counts remain unchanged. Unknown statistical revision dates remain null. The default Compose policy-rate refresh is enabled at 04:00 UTC daily; it refreshes the last 45 days and does not replace the initial historical import.
 

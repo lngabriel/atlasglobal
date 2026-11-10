@@ -230,7 +230,7 @@ curl --fail 'http://localhost:3000/api/v1/sources/WORLD_BANK'
 
 The response contains `indicator`, `series`, `year`, `availableYears` (descending), `coverage`, and a paginated `ranking`. Coverage reports `totalCountries` (the complete persisted country/economy catalog), `withData` (numeric observations for the selected series/year), and `withoutData` (their difference). It does not claim complete worldwide statistical coverage. World aggregate observations are excluded. With no numeric history, the default `year` is null and the ranking is empty; a valid requested year with no observations also returns an empty ranking.
 
-Each entry has `rank`, `country` (`iso3Code`, `name`), and exact decimal `value`. Only numeric observations from that one year enter the ranking. Zero and negative values remain valid; missing countries are excluded from the entries and counted in coverage. Equal values share competition ranks, for example 1, 1, 3. Country codes stabilize the display order of tied rows. Positions are calculated before pagination. Definition, coverage, and entries share a repeatable-read snapshot.
+Each entry has `rank`, `country` (`iso3Code`, `name`), exact decimal `value`, and nullable `providerStatus`. Only numeric observations from that one year enter the ranking. Zero and negative values remain valid; missing countries are excluded from the entries and counted in coverage. Equal values share competition ranks, for example 1, 1, 3. Country codes stabilize the display order of tied rows. Positions are calculated before pagination. Definition, coverage, and entries share a repeatable-read snapshot. Native classifications remain visible: an IMF projection can enter a selected-year ranking, but is identified explicitly rather than presented as a final observed value.
 
 ```bash
 curl --fail 'http://localhost:3000/api/v1/indicators/SP.POP.TOTL/ranking?year=2024&direction=desc&size=20'
@@ -253,6 +253,28 @@ Text cells use RFC 4180 quoting and doubled embedded quotes. Text beginning with
 ```bash
 curl --fail --output atlas-global.csv 'http://localhost:3000/api/v1/exports/indicators?indicator=SP.POP.TOTL&countries=BRA,USA&from=2020&to=2024'
 ```
+
+## Additional annual sources
+
+IMF, UNDP, and Eurostat use the existing public indicator, country-summary, history, comparison, ranking, and CSV endpoints. No provider-specific public import route is added. Select one exact series UUID; annual frequency does not make different sources, report editions, or national definitions interchangeable.
+
+| Source | Indicator codes | Unit and dataset identity |
+| --- | --- | --- |
+| `IMF` | `IMF.GOVERNMENT.DEBT.GDP`, `IMF.CURRENT.ACCOUNT.GDP` | `PERCENT_GDP`; `WEO:{YYYY-MM}` identifies the publication edition. |
+| `UNDP` | `UNDP.HDI`, `UNDP.IHDI` | `INDEX_0_1`; `HDR:{YYYY}` identifies the report edition. |
+| `EUROSTAT` | `EUROSTAT.GOVERNMENT.DEBT.GDP`, `EUROSTAT.RENEWABLE.ENERGY.SHARE` | `PERCENT_GDP` / `PERCENT_GROSS_FINAL_ENERGY`; datasets `GOV_10DD_EDPT1` / `SDG_07_40`. |
+
+`status: AVAILABLE` means a numeric value exists; it does not assert a final observed statistic. IMF `providerStatus: IMF_PROJECTION` marks years at or after the native projection boundary; `IMF_HISTORICAL` marks earlier WEO values, which may also include staff estimates. These classifications accompany histories, latest summaries, ranking entries, and CSV rows. Eurostat retains native flags such as `p` (provisional), `e` (estimated), and `b` (break in series). UNDP supplies no validated per-cell flags, so its `providerStatus` remains null.
+
+Original decimal values, reference years, source organizations, and methodologies are preserved. A report edition or dataset update is not treated as the revision date of every observation; unknown `sourceUpdatedAt` values remain null. Missing countries and absent years are not manufactured. Taiwan has native IMF observations when imported explicitly, without acquiring invented WDI or UNDP coverage.
+
+```bash
+curl --fail 'http://localhost:3000/api/v1/indicators?source=IMF'
+curl --fail 'http://localhost:3000/api/v1/countries/BRA/indicators/UNDP.HDI?from=2020&to=2023'
+curl --fail 'http://localhost:3000/api/v1/indicators/EUROSTAT.GOVERNMENT.DEBT.GDP/ranking?year=2025&direction=desc'
+```
+
+See the [IMF](integrations/imf.md), [UNDP](integrations/un-development.md), and [Eurostat](integrations/eurostat.md) references for exact upstream contracts and coverage limitations. Multiple imported publication editions require an explicit `seriesId`, just as any other multi-series indicator does.
 
 ## Policy rates
 

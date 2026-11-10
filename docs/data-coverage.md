@@ -2,7 +2,7 @@
 
 Atlas Global stores official annual statistics and dated daily policy rates. A catalog entry does not guarantee that a country has observations, that every period is present, or that its latest reference period matches another series. The interface preserves each value's date, unit, provider, methodology, and collection timestamp. Missing observations and periods without a record remain unavailable; neither is converted to zero.
 
-The annual catalog defines 30 indicators: 24 WDI definitions, three OECD definitions, two IBGE definitions, and one BCB definition. An additional dated measure, `POLICY.RATE`, retains daily observations from BCB, BIS, and NBU in a separate model. National sources complement international coverage while retaining their own identities.
+The annual catalog defines 36 indicators: 24 WDI definitions, three OECD definitions, two each from IMF, UNDP, Eurostat, and IBGE, and one BCB definition. An additional dated measure, `POLICY.RATE`, retains daily observations from BCB, BIS, and NBU in a separate model. National sources complement international coverage while retaining their own identities.
 
 ## Supported measures
 
@@ -11,6 +11,10 @@ The annual catalog defines 30 indicators: 24 WDI definitions, three OECD definit
 | Household indebtedness | OECD debt of households and non-profit institutions serving households, as a percentage of net disposable income | A debt-to-income ratio; neither the percentage of indebted households nor debt as a share of GDP. |
 | Brazilian household indebtedness | BCB household debt with the national financial system, relative to restricted gross national disposable household income (RNDBF) accumulated over twelve months | The actual December observation for each completed year. The restricted denominator excludes gross operating surplus and property income; this is not the OECD ratio to net disposable income. |
 | Policy rates | BCB Meta Selic (SGS 432), BIS daily policy instruments, and the NBU key policy rate | Percent per year is the unit, not an annual observation frequency. Targets, repo rates, discount rates, and target-band midpoints retain their different definitions and dates. |
+| Public debt | IMF general government gross debt and Eurostat Maastricht government debt, each as a distinct percentage-of-GDP series | Fiscal coverage, accounting, consolidation, valuation, and publication editions differ. Neither is household debt, and the two sources are not spliced together. |
+| External accounts | IMF current-account balance as a percentage of GDP | Negative balances remain negative. Official current-year projections are labeled separately from historical WEO values, which can also contain staff estimates. |
+| Human development | UNDP HDI and inequality-adjusted HDI, as separate 0–1 indices | Preserve the same report edition and reference year. The inequality-adjusted index is not Gini or a percentage loss; component estimates and survey coverage still matter. |
+| Renewable energy | Eurostat renewable energy in gross final energy consumption | This is neither the renewable share of electricity generation nor of total primary energy. Native precision and provisional/estimated/break flags are preserved. |
 | Average wages | OECD gross average annual wages per full-time-equivalent dependent employee, in constant US dollars at PPP | Annual gross remuneration, not monthly take-home pay. The price base is part of the series definition. |
 | Minimum wages | OECD real annual statutory minimum wages, in constant US dollars at PPP | A common annual pay period; statutory arrangements and country coverage differ. A missing observation does not establish that a country has no minimum wage. |
 | Purchasing-power context | WDI GDP per capita in current international dollars at PPP | Economic output per person adjusted for price levels. This is neither a wage nor a direct index of household buying power. |
@@ -43,6 +47,8 @@ The public series response includes `comparison.allowed` and `comparison.note`. 
 
 These controls support careful exploration; they do not establish a complete country ranking.
 
+IMF WEO and UNDP report editions form part of the selected series identity. Projections can be explored and ranked, but retain their classification in the interface and CSV. IMF `IMF_HISTORICAL` does not establish that all earlier values are final observed statistics. Eurostat flags identify provisional values, estimates, and breaks without changing whether a numeric value is available. See the [IMF](integrations/imf.md), [UNDP](integrations/un-development.md), and [Eurostat](integrations/eurostat.md) references.
+
 ## Reference years and freshness
 
 An observation's year describes the statistical reference period, not the date when Atlas Global collected it. A provider may update its database while an individual country/indicator still has no newer numeric observation. The profile retains the latest available numeric value and identifies later records reported as missing; the collection date remains separate.
@@ -68,7 +74,7 @@ Official source estimates remain identified through their original methodology. 
 
 ## Countries, territories, and world aggregates
 
-The home selection is editorial navigation, not a definition of worldwide coverage. The complete searchable catalog remains separate from the selection. Taiwan is retained as a catalog identity from the [IMF country catalog](https://www.imf.org/external/datamapper/api/v1/countries); this does not create WDI observations for Taiwan or infer unavailable demographic metadata. A country's missing provider coverage is reported explicitly.
+The home selection is editorial navigation, not a definition of worldwide coverage. The complete searchable catalog remains separate from the selection. Taiwan's identity was initially retained from the official IMF country catalog; the current [IMF v2 catalog](https://www.imf.org/external/datamapper/api/v2/countries) and selected WEO series also provide native macroeconomic coverage when imported explicitly. This does not create WDI or UNDP observations for Taiwan or infer unavailable demographic metadata. A country's missing provider coverage is reported explicitly.
 
 IBGE and BCB summaries appear only for Brazil. The public indicator catalog still exposes these definitions and their coverage notes. An explicit single-country historical request outside that national coverage returns an empty observation collection rather than inventing values. International definitions remain visible when a country's observations are missing.
 

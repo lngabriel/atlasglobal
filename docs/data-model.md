@@ -37,6 +37,10 @@ National statistics use the same tables and constraints. IBGE's 0–1 Gini coeff
 
 A null upstream value becomes a MISSING observation. Numeric zero remains AVAILABLE. IBGE's `-` symbol denotes absolute zero; `..`, `...`, and `X` denote unavailable/suppressed cells. Those symbols are retained in `provider_status`, with zero and missing statuses assigned according to the published conventions. A year not returned by the provider is not synthesized or deleted from existing history. Validated statistical update dates are distinct from collection timestamps. Unknown update dates remain null; HTTP resource and catalog-maintenance dates are not interpreted as statistical revisions.
 
+IMF, UNDP, and Eurostat reuse the annual tables without a schema change. An IMF WEO release uses dataset identity `WEO:{YYYY-MM}` and a UNDP report uses `HDR:{YYYY}`, keeping different publications in separate series. Values within one edition can be revised idempotently; the database does not retain every vintage within that edition. Eurostat keeps its selected annual dataset and explicit dimensions in the dataset/external-code identity.
+
+Observation availability remains separate from statistical classification. `AVAILABLE` includes numeric official estimates and projections; IMF records retain `IMF_PROJECTION` or `IMF_HISTORICAL` in `provider_status`. The historical flag does not claim final actual data. Eurostat's provisional, estimated, and break flags remain unmodified, and the public ranking projection includes this field. UNDP blank published cells become MISSING, while absent countries and years create no records. Its HDI/IHDI values retain their native 0–1 scale. No provider update timestamp is invented as an observation revision date.
+
 The World Bank often leaves its unit field empty. Units for the supported series are curated from their official definitions and retained in the catalog. An unexpected nonempty upstream unit causes the import to fail for review instead of silently mixing measurements.
 
 ## Persistence
@@ -46,6 +50,8 @@ Domain entities are JPA-mapped and validated by Hibernate. The import repository
 Each country catalog batch, series update, and observation page is transactional. Reusing an existing series with a different indicator, unit, or frequency is rejected; its definition must be reviewed instead of silently mixing measurements. Progress counters are committed in the same transaction as their observations. A failure preserves previously committed pages and older historical periods, and marks the run FAILED. Repeating the import safely replaces current values. This preserves historical periods, not every previous version of each revised value.
 
 A provider-specific session-level PostgreSQL advisory lock prevents overlapping imports of the same source across processes. A new lock owner marks that provider's abandoned RUNNING executions as FAILED. No long database transaction is held while contacting a provider. World and country observations update the same execution's progress counter within their respective batch transactions.
+
+The additional annual-source coordinator shares locks, country-catalog prerequisites, audit records, normalized-boundary validation, and transactional storage across IMF, UNDP, and Eurostat. Duplicate country/year pairs, unknown configured countries, or observations outside the requested scope fail the execution rather than introducing inconsistent histories. Source adapters retain responsibility for their own dimensions, publication identity, units, and response format. The OECD and UNDP adapters reuse one bounded RFC 4180 CSV decoder.
 
 Observations are indexed by series/year/value for analytical queries, with a unique index covering country/series/year histories. Import history is indexed by provider/start time.
 
