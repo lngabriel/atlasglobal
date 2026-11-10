@@ -4,7 +4,11 @@ Atlas Global provides public read-only queries. It has no accounts, sessions, au
 
 ## HTTP boundary
 
-The Nginx frontend is the public application entry point. It applies:
+The [free Pages/Render/Neon deployment](deployment.md) serves static frontend assets on Pages and exposes the backend directly through Render HTTPS. Its generated Pages headers permit only the exact API origin in CSP. The `render` profile validates required private database fields, a direct Neon hostname, verified JDBC TLS, one exact production `pages.dev` CORS origin, and loopback-only management configuration. Backend responses carry their own CSP, frame/MIME protection, and referrer policy because Nginx is absent. `/healthz` exposes minimal uncached application availability without a database query; the separate private Actuator readiness check includes PostgreSQL.
+
+CORS restricts browser origins and is not API access control or rate limiting. The Nginx limits below apply only to the Compose deployment, not to Render's direct public API. No additional free managed API traffic filter is assumed. Frontend build variables contain only the public API origin/timeout; actual credentials remain in Render or private local operational files. See deployment instructions for direct-connection imports, backups, and free usage limits.
+
+For the self-hosted Compose deployment, Nginx is the public application entry point. It applies:
 
 - A shared-memory per-client API limit of ten requests per second, with a burst of 100. CSV endpoints additionally allow two requests per second, with a burst of five. Excess requests return HTTP 429 and `Retry-After: 1`; OPTIONS requests are excluded from these read limits.
 - A one-megabyte request-body limit, bounded upstream connection/read timeouts, and no public Actuator proxy.

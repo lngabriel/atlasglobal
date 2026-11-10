@@ -8,13 +8,14 @@ Verified on **2026-11-10** with Java 21.0.13, Maven 3.9.12, PostgreSQL 17.11, No
 mvn -f backend/pom.xml -Pintegration verify
 ```
 
-**166 backend tests passed** — 107 unit/contract tests and 59 PostgreSQL integration tests, with no failures, errors, or skipped tests. Integration tests used a dedicated database; transactional store tests rolled back their writes and cache tests removed their committed audit fixtures.
+**197 backend tests passed** — 137 unit/contract tests and 60 PostgreSQL integration tests, with no failures, errors, or skipped tests. Integration tests used a dedicated database; transactional store tests rolled back their writes and cache tests removed their committed audit fixtures.
 
 Coverage includes:
 
 - Explicit CORS, safe errors, read-only API methods, OpenAPI, and isolated Actuator health endpoints.
 - Bounded catalog caching, immutable pagination keys, invalidation after successful or failed imports committed by another connection, and cache bypass inside existing snapshot transactions.
 - Registered MVC handlers and view beans exclude the SSE fragment and XSLT rendering features covered by the reviewed Spring advisories.
+- Required Render variables, direct Neon hostname/database validation, verified TLS/Flyway configuration, exact production Pages CORS, private management overrides, minimal uncached public health, and unavailable/readiness transitions.
 - World Bank pagination, metadata, aggregate exclusion, exact decimals, null versus zero, HTTP retries, invalid provider responses, and bounded import configuration.
 - OECD annual dimension selection, RFC 4180 CSV, exact unit multipliers, missing values, zero, duplicate rejection, distinct price bases, retries, and transport dates that must not become statistical revision dates.
 - IBGE metadata, variables, national geography, classifications, annual periods, coefficient scale, price-base identity, exact decimals, SIDRA symbols, bounded gzip, duplicate keys, and HTTP failures.
@@ -38,7 +39,7 @@ npm run build
 npm run test:browser
 ```
 
-**72 frontend unit tests passed**, with no failures or skipped tests. TypeScript and the Vite production build passed. Unit coverage includes complete paginated retrieval, cancellation, safe errors, localized units, absent-year gaps, zero versus missing values, annual changes, country search, comparison selection, and latest common-year calculations. National tests preserve three-decimal Gini values and changes, dynamic real-income price bases, and the distinct BCB denominator. Additional contracts cover rankings, CSV transport, local geography, dated rates, common dates, projection/provisional labels, three-decimal HDI/renewable values, and absolute index changes. Inconsistent units, countries, or failed intermediate pages reject the complete history rather than exposing partial data.
+**76 frontend unit tests passed**, with no failures or skipped tests. TypeScript and both Vite production/Pages builds passed. Unit coverage includes complete paginated retrieval, cancellation, safe errors, localized units, absent-year gaps, zero versus missing values, annual changes, country search, comparison selection, and latest common-year calculations. National tests preserve three-decimal Gini values and changes, dynamic real-income price bases, and the distinct BCB denominator. Additional contracts cover rankings, CSV transport, local geography, dated rates, common dates, projection/provisional labels, three-decimal HDI/renewable values, and absolute index changes. Deployment tests compile the actual JSON and both CSV transports to check the shared external origin, omitted credentials, ninety-second timeout, invalid public configuration, and exact Pages CSP. Inconsistent units, countries, or failed intermediate pages reject the complete history rather than exposing partial data.
 
 **79 Chrome checks passed** against the production application served by Nginx at `http://127.0.0.1:3000`, with the documented annual and policy-rate imports loaded:
 
@@ -68,11 +69,25 @@ The fresh-install smoke suite also passed **nine Chrome checks** against the sep
 
 - HTTP checks passed for security headers, private management endpoints, gzip, GeoJSON MIME type, versioned-bundle caching, HTML revalidation, and Nginx health. A separate loopback burst test verified HTTP 429 with `Retry-After`, recovery after the limit interval, and rejection of spoofed forwarded-IP identities.
 - The npm audit reported **zero vulnerabilities**. The resolved Java audit checked **91 runtime coordinates**, with **zero unreviewed findings** and two exact, time-limited Spring Web MVC assessments. These are usage-specific findings, not patched library advisories; see [security](security.md) and the required review date of **2026-12-10**.
-- All **three dependency-audit tool tests** passed, including incomplete-provider-response rejection and assessment expiry. `actionlint` validated the CI and manual image-publication workflows.
+- All **seven operational-tool tests** passed: three dependency-audit checks and four remote-backup checks, including incomplete-provider-response rejection, assessment expiry, verified TLS arguments, private output, refusal to overwrite, and partial-dump cleanup. `actionlint` validated the CI and manual image-publication workflows.
 - The isolated production stack reached healthy status. Backend/frontend run as non-root users with read-only filesystems and dropped capabilities. Only the loopback frontend port is published; database, backend, and management ports remain private. Provider schedules are disabled by default in this configuration.
 - A fresh-database backup restored with its seeded identity and all five Flyway migrations. A separate backup of the populated local database restored into an isolated verification database with **43,918 annual observations, 111,586 daily policy-rate observations, and 264 world observations**. The source database was not modified by backup or restore.
 
-CI and manual GHCR publication are configured and locally validated. No GitHub workflow was executed remotely, images were not published, and no public deployment was performed. Hosting, domain, TLS, and registry access remain deployment inputs. See [deployment and recovery instructions](deployment.md).
+CI and manual GHCR publication are configured and locally validated. No GitHub workflow was executed remotely, images were not published, and no public deployment was performed. See [deployment and recovery instructions](deployment.md).
+
+## Free deployment preparation
+
+The selected architecture is Cloudflare Pages, Render Free Docker, and Neon Free PostgreSQL. Its Render Blueprint passed local validation against the official JSON Schema; no authenticated Render API was called. Required values use placeholders or private dashboard inputs, and the local backend environment filename is ignored by Git. No dependency was added for this deployment.
+
+An isolated local PostgreSQL 17 server used a temporary certificate authority and direct hostname. The real `render` profile connected with certificate/hostname verification and applied all five Flyway migrations. Separate startup checks rejected an untrusted certificate and a hostname mismatch. HTTP checks confirmed the exact production origin, rejected preview/other/local origins, minimal health, direct-response headers, read-only health methods, and private Actuator paths.
+
+With the Blueprint JVM settings, a **512 MiB memory / 0.1 CPU** container started successfully. Spring reported **329.601 seconds** to start; observed memory after startup and representative requests was approximately **275–284 MiB**, not a measured peak or a production-load guarantee. This strict CPU-cap test shows why an initial request can exceed the documented generic Render resume estimate or the frontend's bounded retry budget. The interface explains delayed startup and retains manual retry. Actual Render performance remains unmeasured.
+
+The static Pages artifact contains **14 files**, with the largest approximately **466 KB**, below the checked Pages file-count/size limits. It passed **nine cross-origin Chrome smoke checks** through local HTTPS endpoints, generated CSP headers, and the constrained backend, including direct profile/map routes and responsive widths. Another **three Chrome checks**, run against both deployment modes, paused a real API request for over ten seconds, verified the startup notice with a usable country directory, resumed the request, and confirmed recovery without fabricated data, JavaScript exceptions, CSP violations, or unexpected API errors. Local hostname mapping and test-edge certificate bypass were confined to the browser fixture; JDBC certificate verification remained enabled.
+
+Native `scripts/backup.sh --remote` completed with verified TLS and restored into a separate empty database with all five migrations. The populated local application database measured approximately **48 MB** with its existing observations; that is a local PostgreSQL measurement, not Neon's billed storage or an allowance for unlimited future imports. The real remote database has not been created.
+
+The Pages build, delayed-response browser check, and existing suites are configured in CI. Accounts, real credentials, final allocated service names, remote TLS/health/CORS, platform-edge behavior, true cold starts, quotas, and sustained-load memory remain publication checks. No paid service, remote deployment, registry publication, or Git push was performed.
 
 ## Live imports and database integrity
 

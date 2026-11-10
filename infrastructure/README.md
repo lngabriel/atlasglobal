@@ -10,4 +10,6 @@ Services are defined in the root [docker-compose.yml](../docker-compose.yml). Th
 
 See the main [README](../README.md) for configuration variables and commands. The local configuration does not include public hosting or TLS.
 
-The separate [production Compose configuration](production/compose.yml) runs verified container images with private database/backend networking, non-root read-only application containers, and readiness checks. Its frontend is bound to loopback for the selected HTTPS ingress. Configure its private environment file and exact trusted proxy addresses before exposure; see the [deployment reference](../docs/deployment.md).
+The selected free deployment uses [Cloudflare Pages, Render, and Neon](../docs/deployment.md). Its Render template is [render.yaml](../render.yaml), and `free-tier/` holds placeholder-only operational environment and native PostgreSQL service examples. These files do not create remote resources. Actual credentials are entered privately and never copied to the frontend.
+
+The optional [production Compose configuration](production/compose.yml) runs verified images with private database/backend networking, non-root read-only application containers, and readiness checks. Its frontend is bound to loopback for a selected HTTPS ingress. See the separate [self-hosted deployment reference](../docs/deployment-compose.md); a host for this alternative is not included in the selected free services.

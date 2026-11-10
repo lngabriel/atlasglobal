@@ -11,7 +11,7 @@ The home page presents a focused selection of 25 countries and territories, publ
 - **Backend:** Java 21, Spring Boot 3, Spring Web, Spring Data JPA, Hibernate, Validation, Spring Cache with Caffeine, Actuator, and Springdoc OpenAPI.
 - **Data:** PostgreSQL 17 and Flyway, with World Bank, IMF, OECD, UNDP, Eurostat, IBGE, BCB, BIS, and NBU adapters and transactional imports.
 - **Frontend:** React, TypeScript, Vite, Tailwind CSS, shadcn/ui, React Router, TanStack Query, Recharts 3, and React Leaflet 5 with Leaflet 1.9.
-- **Runtime:** Docker Compose, with separate backend, frontend, and database services.
+- **Runtime:** Docker Compose locally; Cloudflare Pages, Render Docker, and Neon PostgreSQL for the free deployment.
 
 ## Quick start
 
@@ -342,6 +342,8 @@ curl --fail http://127.0.0.1:8081/actuator/health/readiness
 
 The expected response is `{"status":"UP"}`. Only health endpoints are exposed on the separate management port, without component details. Compose does not publish that port. `/actuator/health` on the main application port returns 404.
 
+The public backend `/healthz` reports application availability only and does not query PostgreSQL. The `render` profile uses it for platform probes so those probes do not keep Neon awake. Private Actuator readiness remains the database-connectivity check.
+
 ## Tests
 
 Unit tests do not require PostgreSQL or external API access:
@@ -393,9 +395,19 @@ Use `npm ci` to reproduce the dependency versions in `package-lock.json`. Consul
 
 ## Deployment and releases
 
-The [deployment reference](docs/deployment.md) describes manual GHCR image publication, the production Compose configuration, private environment variables, TLS ingress, trusted client IPs, health checks, backup/restore, and schema-compatible rollback. Image publication requires successful CI for the exact main commit and runs only on manual dispatch. Deployment uses verified image digests; it does not automatically publish a site or choose a hosting provider.
+The [deployment reference](docs/deployment.md) prepares a free Cloudflare Pages frontend, Render Docker backend, and Neon PostgreSQL database, with platform-managed HTTPS and an initial `pages.dev` address. It covers account configuration, exact production CORS, verified direct database TLS, required private variables, cold starts, local imports, backup/restore, publication, and free-plan limits. No remote resource is created by these files.
 
-Production files are under `infrastructure/production/`. The database/backend have no published ports, and the frontend is bound to loopback for a controlled HTTPS ingress. Prepare the platform, domain, secret configuration, and proxy topology before exposing it publicly. Dependency advisories and the time-limited Spring assessments are recorded in the [security reference](docs/security.md).
+The Pages frontend uses public build configuration only:
+
+```bash
+VITE_API_BASE_URL=https://YOUR_SERVICE.onrender.com npm --prefix frontend run build:pages
+```
+
+Set the actual Render origin without an `/api` suffix. JSON and CSV share this URL. Backend credentials belong only in Render or the ignored local operational environment file; never in `VITE_*` variables. Normal local/Docker builds keep same-origin `/api` requests when `VITE_API_BASE_URL` is unset.
+
+The root `render.yaml` reuses `backend/Dockerfile`, selects the Free plan, and disables automatic deploys. The `render` profile bounds memory-related resources and uses a direct Neon endpoint because import coordination requires session advisory locks. Sleeping services cannot guarantee scheduled imports or continuous availability. Nginx traffic limits from Compose do not apply to the direct Render API.
+
+The [self-hosted Compose alternative](docs/deployment-compose.md) and optional manual GHCR workflow remain available. GHCR publication requires successful CI for the exact main commit and manual dispatch; it is not needed when Render builds from the repository. Security and dependency assessments are recorded in the [security reference](docs/security.md).
 
 ## Project structure
 
@@ -411,7 +423,9 @@ frontend/
   public/geodata/  Local world geometry and its provenance/license reference
   tests/         Unit tests and browser checks
 infrastructure/  Local runtime configuration guidance
+  free-tier/     Private operational environment and native PostgreSQL service examples
   production/    Private runtime template and trusted-ingress configuration
+render.yaml      Free Render Docker service template; manual deploys
 scripts/         Database backup and resolved-dependency audit tools
 .github/         CI, manual image publication, dependency updates, and advisory assessments
 docs/            Technical architecture, data model, and provider documentation
