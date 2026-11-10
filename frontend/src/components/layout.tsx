@@ -9,16 +9,18 @@ export function Layout() {
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <a className="skip-link" href="#content">Pular para o conteúdo</a>
       <header className="border-b border-border">
-        <div className="page-shell flex min-h-16 flex-wrap items-center justify-between gap-3 py-2">
+        <div className="page-shell grid min-h-16 grid-cols-[1fr_auto] items-center gap-x-5 gap-y-3 py-3 sm:grid-cols-[auto_1fr_auto]">
           <Link to="/" aria-label="Atlas Global, início" className="text-lg font-semibold tracking-tight sm:text-xl">atlas<span className="font-normal text-muted-foreground"> global</span><span className="ml-1 text-muted-foreground">.</span></Link>
-          <nav aria-label="Navegação principal" className="flex items-center gap-3 text-xs sm:gap-7">
+          <nav aria-label="Navegação principal" className="col-span-2 row-start-2 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 text-xs sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:justify-self-end sm:gap-x-7">
             <NavLink to="/" end className={({ isActive }) => isActive ? 'font-semibold' : 'text-muted-foreground hover:text-foreground'}>Explorar</NavLink>
             <NavLink to="/comparar" className={({ isActive }) => isActive ? 'font-semibold' : 'text-muted-foreground hover:text-foreground'}>Comparar</NavLink>
+            <NavLink to="/rankings" className={({ isActive }) => isActive ? 'font-semibold' : 'text-muted-foreground hover:text-foreground'}>Rankings</NavLink>
+            <NavLink to="/mapa" className={({ isActive }) => isActive ? 'font-semibold' : 'text-muted-foreground hover:text-foreground'}>Mapa</NavLink>
             <NavLink to="/sobre" className={({ isActive }) => isActive ? 'font-semibold' : 'text-muted-foreground hover:text-foreground'}>O projeto</NavLink>
-            <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}>
-              {theme === 'dark' ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />}
-            </Button>
           </nav>
+          <Button className="col-start-2 row-start-1 sm:col-start-3" variant="ghost" size="icon" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}>
+            {theme === 'dark' ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />}
+          </Button>
         </div>
       </header>
       <main id="content" className="flex-1"><Outlet /></main>

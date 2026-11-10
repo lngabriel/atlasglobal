@@ -5,6 +5,7 @@ import { useWorkspaceParams } from '@/hooks/use-workspace-params'
 import { useCountry, useCountryIndicators, useHistory } from '@/hooks/use-atlas-data'
 import { ErrorState, LoadingState } from '@/components/query-state'
 import { PeriodFilter, currentYear, queryYear } from '@/components/period-filter'
+import { CsvExportButton } from '@/components/csv-export-button'
 import { incomeLabel, regionLabel } from '@/lib/country-labels'
 import { categoryLabel, formatDate, formatValue, unitLabel } from '@/lib/format'
 import { annualChange } from '@/lib/history'
@@ -177,6 +178,10 @@ export function CountryDashboard({ code, standalone = false }: { code: string; s
         {!selected ? <p role="status" className="py-8 text-sm text-muted-foreground">
           A série deste endereço não está disponível. Escolha um indicador acima.
         </p> : <>
+          <div className="mb-4 flex justify-end">
+            <CsvExportButton selection={{ countries: [code], indicator: selected.indicator.code, seriesId: selected.series.id, from, to }}
+              disabled={history.isPending || history.isError || observations.length === 0} />
+          </div>
           <div className="border-b border-border pb-4">
             <PeriodFilter from={from} to={to} onChange={period} />
           </div>

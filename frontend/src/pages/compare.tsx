@@ -5,6 +5,7 @@ import { useWorkspaceParams } from '@/hooks/use-workspace-params'
 import { ErrorState, LoadingState } from '@/components/query-state'
 import { PeriodFilter, currentYear, queryYear } from '@/components/period-filter'
 import { Button } from '@/components/ui/button'
+import { CsvExportButton } from '@/components/csv-export-button'
 import { buildComparisonPoints, latestCommonPeriod, parseComparisonCountries } from '@/lib/comparison'
 import { categoryLabel, formatDate, formatValue, unitLabel } from '@/lib/format'
 import type { Country, History } from '@/services/api'
@@ -214,6 +215,10 @@ export function ComparePage() {
             </Link>)}
           </div>
         </div> : <>
+          <div className="mb-4 flex justify-end">
+            <CsvExportButton selection={{ countries: selection.countries, indicator: indicatorCode, seriesId: selected.id, from, to }}
+              disabled={Boolean(selection.error) || unknownCountry || history.isPending || history.isError || observations.length === 0} />
+          </div>
           <PeriodFilter from={from} to={to} onChange={(first, last) => setParams(previous => {
             const next = new URLSearchParams(previous)
             next.set('de', String(first)); next.set('ate', String(last))
