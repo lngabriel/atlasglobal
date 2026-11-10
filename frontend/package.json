@@ -12,7 +12,9 @@
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "test": "node --experimental-strip-types --test --experimental-test-isolation=none tests/*.test.ts",
-    "test:browser": "node tests/browser-check.mjs"
+    "test:browser": "node tests/browser-check.mjs",
+    "test:smoke": "node tests/browser-check.mjs --smoke",
+    "test:http": "node tests/http-check.mjs"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",
