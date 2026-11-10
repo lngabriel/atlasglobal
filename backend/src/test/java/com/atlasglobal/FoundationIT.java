@@ -15,6 +15,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 class FoundationIT {
     @Autowired private JdbcTemplate jdbc;
     @Autowired private TestRestTemplate http;
+    @Autowired private org.springframework.context.ApplicationContext context;
+    @Autowired @org.springframework.beans.factory.annotation.Qualifier("requestMappingHandlerMapping")
+    private org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping mappings;
     @LocalServerPort private int applicationPort;
     @Value("${local.management.port}") private int managementPort;
 
@@ -37,6 +40,18 @@ class FoundationIT {
             .getStatusCode().value()).isEqualTo(404);
         assertThat(http.getForEntity(url(applicationPort, "/actuator/health"), String.class)
             .getStatusCode().value()).isEqualTo(404);
+    }
+
+    @Test
+    void doesNotExposeTheXsltOrSseFragmentFeaturesFlaggedBySpringAdvisories() {
+        assertThat(context.getBeansOfType(org.springframework.web.servlet.view.xslt.XsltView.class)).isEmpty();
+        assertThat(context.getBeansOfType(org.springframework.web.servlet.view.xslt.XsltViewResolver.class)).isEmpty();
+        mappings.getHandlerMethods().forEach((mapping, handler) -> {
+            assertThat(mapping.getProducesCondition().getProducibleMediaTypes())
+                .doesNotContain(org.springframework.http.MediaType.TEXT_EVENT_STREAM);
+            assertThat(handler.getMethod().getGenericReturnType().getTypeName())
+                .doesNotContain("FragmentsRendering", "SseEmitter");
+        });
     }
 
     private String url(int port, String path) {

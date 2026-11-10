@@ -13,6 +13,11 @@
   <name>Atlas Global</name>
   <properties>
     <java.version>21</java.version>
+    <jackson-bom.version>2.21.8</jackson-bom.version>
+    <tomcat.version>10.1.61</tomcat.version>
+    <postgresql.version>42.7.14</postgresql.version>
+    <log4j2.version>2.25.5</log4j2.version>
+    <commons-lang3.version>3.21.0</commons-lang3.version>
   </properties>
   <dependencies>
     <dependency>
