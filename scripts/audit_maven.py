@@ -31,8 +31,14 @@ def evaluate(packages, response, assessments, today):
         raise ValueError('OSV returned an incomplete audit response')
     failures = []
     for (package, version), result in zip(packages, results):
+        if not isinstance(result, dict) or result.get('error') or result.get('next_page_token'):
+            raise ValueError('OSV returned an error or incomplete package result')
+        if not isinstance(result.get('vulns', []), list):
+            raise ValueError('OSV returned an invalid advisory collection')
         for advisory in result.get('vulns', []):
             identifier = advisory['id']
+            if not isinstance(identifier, str) or not identifier:
+                raise ValueError('OSV returned an invalid advisory identifier')
             if reviewed(package, version, identifier, assessments, today):
                 print(f'REVIEWED not affected: {package}@{version} {identifier}')
             else:

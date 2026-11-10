@@ -32,6 +32,9 @@ class MavenAuditTest(unittest.TestCase):
         packages = [('org.example:core', '1.2')]
         with self.assertRaises(ValueError):
             audit.evaluate(packages, {'results': []}, [], datetime.date(2026, 11, 10))
+        for partial in [{'error': {'code': 500}}, {'next_page_token': 'more-results'}, {'vulns': None}]:
+            with self.assertRaises(ValueError):
+                audit.evaluate(packages, {'results': [partial]}, [], datetime.date(2026, 11, 10))
         self.assertEqual(audit.evaluate(packages, {'results': [{'vulns': [{'id': 'GHSA-NEW'}]}]}, [],
                                         datetime.date(2026, 11, 10)), ['org.example:core@1.2 GHSA-NEW'])
 
