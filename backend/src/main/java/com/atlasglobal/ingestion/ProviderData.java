@@ -22,4 +22,5 @@ public final class ProviderData {
     public record Batch(List<Observation> observations, LocalDate sourceUpdatedAt) {
         public Batch { observations = List.copyOf(observations); }
     }
+    public record ImportedSeries(Series definition, Indicator metadata, Batch batch) {}
 }
