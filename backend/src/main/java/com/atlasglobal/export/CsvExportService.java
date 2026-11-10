@@ -5,6 +5,7 @@ import com.atlasglobal.observation.HistoryResponse;
 import com.atlasglobal.observation.ObservationQueryService;
 import com.atlasglobal.observation.ObservationResponse;
 import com.atlasglobal.shared.api.PageParameters;
+import com.atlasglobal.shared.api.CsvText;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.UUID;
@@ -54,11 +55,6 @@ public class CsvExportService {
 
     /** RFC 4180 quoting plus a spreadsheet text prefix for formula-like textual cells. */
     static String text(String value) {
-        if (value == null) return "\"\"";
-        String leading = value.stripLeading();
-        boolean control = !value.isEmpty() && "\t\r\n".indexOf(value.charAt(0)) >= 0;
-        boolean formula = !leading.isEmpty() && "=+-@＝＋－＠".indexOf(leading.charAt(0)) >= 0;
-        String safe = control || formula ? "\t" + value : value;
-        return "\"" + safe.replace("\"", "\"\"") + "\"";
+        return CsvText.cell(value);
     }
 }

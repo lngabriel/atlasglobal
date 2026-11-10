@@ -8,7 +8,7 @@ import com.atlasglobal.shared.api.PageResponse;
 import com.atlasglobal.shared.api.QueryText;
 import java.time.Year;
 import java.time.ZoneOffset;
-import java.util.Arrays;
+import com.atlasglobal.shared.api.CountrySelection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -26,7 +26,7 @@ public class ObservationQueryService {
     }
 
     public HistoryResponse history(String code, String countries, UUID seriesId, int from, Integer to, PageParameters page) {
-        var countryCodes = parseCountries(countries);
+        var countryCodes = CountrySelection.parse(countries);
         var references = observations.countries(countryCodes);
         if (references.size() != countryCodes.size()) throw ApiException.notFound("Um ou mais países não foram encontrados.");
         int end = to == null ? Year.now(ZoneOffset.UTC).getValue() : to;
@@ -49,13 +49,4 @@ public class ObservationQueryService {
             page.pageable("name", Set.of("name", "code", "category"), "code")));
     }
 
-    private List<String> parseCountries(String countries) {
-        var codes = Arrays.stream(countries.split(",", -1)).map(String::strip)
-            .map(code -> code.toUpperCase(Locale.ROOT)).toList();
-        if (codes.isEmpty() || codes.size() > 5 || codes.stream().anyMatch(c -> !c.matches("[A-Z0-9]{3}"))
-            || codes.stream().distinct().count() != codes.size()) {
-            throw ApiException.badRequest("Informe de um a cinco códigos de países distintos, separados por vírgulas.");
-        }
-        return codes;
-    }
 }
