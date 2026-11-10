@@ -14,7 +14,7 @@ class PolicyRateScheduleTest {
         context.run(application -> assertThat(application).doesNotHaveBean(PolicyRateSchedule.class));
         var enabled = context.withPropertyValues("atlas.policy-rates.schedule-enabled=true");
         enabled.run(application -> assertThat(application).hasSingleBean(PolicyRateSchedule.class));
-        for (String flag : new String[]{"atlas.import.run-once", "atlas.oecd-import.run-once", "atlas.ibge-import.run-once", "atlas.bcb-import.run-once", "atlas.policy-rates.run-once"}) {
+        for (String flag : new String[]{"atlas.import.run-once", "atlas.oecd-import.run-once", "atlas.ibge-import.run-once", "atlas.bcb-import.run-once", "atlas.policy-rates.run-once", "atlas.imf-import.run-once", "atlas.un-import.run-once", "atlas.eurostat-import.run-once"}) {
             enabled.withPropertyValues(flag + "=true").run(application -> assertThat(application).doesNotHaveBean(PolicyRateSchedule.class));
         }
     }

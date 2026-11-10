@@ -11,8 +11,11 @@ class ImportCommandGuard {
                        @Value("${atlas.oecd-import.run-once:false}") boolean oecd,
                        @Value("${atlas.ibge-import.run-once:false}") boolean ibge,
                        @Value("${atlas.bcb-import.run-once:false}") boolean bcb,
-                       @Value("${atlas.policy-rates.run-once:false}") boolean policyRates) {
-        if (Stream.of(worldBank, oecd, ibge, bcb, policyRates).filter(Boolean::booleanValue).count() > 1) {
+                       @Value("${atlas.policy-rates.run-once:false}") boolean policyRates,
+                       @Value("${atlas.imf-import.run-once:false}") boolean imf,
+                       @Value("${atlas.un-import.run-once:false}") boolean un,
+                       @Value("${atlas.eurostat-import.run-once:false}") boolean eurostat) {
+        if (Stream.of(worldBank, oecd, ibge, bcb, policyRates, imf, un, eurostat).filter(Boolean::booleanValue).count() > 1) {
             throw new IllegalArgumentException("Run one provider import command at a time");
         }
     }

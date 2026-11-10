@@ -11,7 +11,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 @Configuration
 @EnableScheduling
 @ConditionalOnProperty(name = "atlas.import.schedule-enabled", havingValue = "true")
-@ConditionalOnExpression("!${atlas.import.run-once:false} && !${atlas.oecd-import.run-once:false} && !${atlas.ibge-import.run-once:false} && !${atlas.bcb-import.run-once:false} && !${atlas.policy-rates.run-once:false}")
+@ConditionalOnExpression("!${atlas.import.run-once:false} && !${atlas.oecd-import.run-once:false} && !${atlas.ibge-import.run-once:false} && !${atlas.bcb-import.run-once:false} && !${atlas.policy-rates.run-once:false} && !${atlas.imf-import.run-once:false} && !${atlas.un-import.run-once:false} && !${atlas.eurostat-import.run-once:false}")
 class ImportSchedule {
     private static final Logger LOG = LoggerFactory.getLogger(ImportSchedule.class);
     private final WorldBankImportService importer;

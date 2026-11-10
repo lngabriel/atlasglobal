@@ -7,7 +7,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class ImportCommandGuardTest {
     private static final List<String> COMMANDS = List.of("atlas.import.run-once", "atlas.oecd-import.run-once",
-        "atlas.ibge-import.run-once", "atlas.bcb-import.run-once", "atlas.policy-rates.run-once");
+        "atlas.ibge-import.run-once", "atlas.bcb-import.run-once", "atlas.policy-rates.run-once",
+        "atlas.imf-import.run-once", "atlas.un-import.run-once", "atlas.eurostat-import.run-once");
     private final ApplicationContextRunner context = new ApplicationContextRunner()
         .withUserConfiguration(ImportCommandGuard.class);
 

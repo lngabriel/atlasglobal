@@ -46,6 +46,9 @@ management:
         readiness:
           include: readinessState,db
 atlas:
+  additional-import:
+    schedule-enabled: ${ADDITIONAL_SOURCES_SCHEDULE_ENABLED:false}
+    cron: ${ADDITIONAL_SOURCES_IMPORT_CRON:0 0 5 * * SAT}
   policy-rates:
     from: ${POLICY_RATE_FROM:2010-01-01}
     schedule-enabled: ${POLICY_RATE_SCHEDULE_ENABLED:false}

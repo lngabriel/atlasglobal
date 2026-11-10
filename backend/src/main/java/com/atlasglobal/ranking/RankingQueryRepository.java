@@ -44,11 +44,11 @@ class RankingQueryRepository {
         String direction = page.getSort().getOrderFor("value").isDescending() ? "DESC" : "ASC";
         var rows = jdbc.query("""
             SELECT RANK() OVER (ORDER BY o.value %s) AS position,
-                   c.iso3_code, c.name, o.value
+                   c.iso3_code, c.name, o.value, o.provider_status
             """.formatted(direction) + from + " ORDER BY o.value " + direction
             + ", c.iso3_code ASC LIMIT :limit OFFSET :offset", parameters,
             (rs, row) -> new RankingEntry(rs.getLong("position"),
-                new CountryReference(rs.getString("iso3_code"), rs.getString("name")), rs.getBigDecimal("value")));
+                new CountryReference(rs.getString("iso3_code"), rs.getString("name")), rs.getBigDecimal("value"), rs.getString("provider_status")));
         return new PageImpl<>(rows, page, count == null ? 0 : count);
     }
 }

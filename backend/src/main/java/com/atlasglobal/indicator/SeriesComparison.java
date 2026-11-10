@@ -3,6 +3,18 @@ package com.atlasglobal.indicator;
 /** Curated restrictions accompany the original provider methodology in every response. */
 public record SeriesComparison(boolean allowed, String note) {
     public static SeriesComparison forSeries(SeriesResponse series) {
+        if ("IMF".equals(series.source().code())) {
+            return new SeriesComparison(true,
+                "Mesma edição do World Economic Outlook e mesma definição. Projeções do FMI são identificadas nos valores; o histórico também pode conter estimativas da equipe. Cobertura fiscal, anos de referência e revisões podem diferir entre países.");
+        }
+        if ("UNDP".equals(series.source().code())) {
+            return new SeriesComparison(true,
+                "Compare a mesma edição do Relatório de Desenvolvimento Humano. IDH e IDH ajustado à desigualdade são índices distintos de 0 a 1; as séries incorporam estimativas e revisões oficiais dos componentes e não medem diretamente renda ou salário.");
+        }
+        if ("EUROSTAT".equals(series.source().code())) {
+            return new SeriesComparison(true,
+                "Mesma definição e unidade do Eurostat, com cobertura europeia parcial. Valores provisórios, estimativas e quebras de série mantêm os sinalizadores da fonte. Dívida pública segue a definição de Maastricht; energia renovável usa o consumo final bruto de energia.");
+        }
         if ("IBGE".equals(series.source().code())) {
             return new SeriesComparison(false,
                 "Série nacional do Brasil, publicada pelo IBGE. A população pesquisada, a escala e a base de preços seguem a definição original; esta série não fornece observações harmonizadas de outros países.");

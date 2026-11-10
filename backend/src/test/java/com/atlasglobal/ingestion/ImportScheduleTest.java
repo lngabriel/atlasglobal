@@ -25,5 +25,9 @@ class ImportScheduleTest {
             .run(application -> assertThat(application).doesNotHaveBean(ImportSchedule.class));
         context.withPropertyValues("atlas.import.schedule-enabled=true", "atlas.bcb-import.run-once=true")
             .run(application -> assertThat(application).doesNotHaveBean(ImportSchedule.class));
+        for (String flag : new String[]{"atlas.policy-rates.run-once", "atlas.imf-import.run-once", "atlas.un-import.run-once", "atlas.eurostat-import.run-once"}) {
+            context.withPropertyValues("atlas.import.schedule-enabled=true", flag + "=true")
+                .run(application -> assertThat(application).doesNotHaveBean(ImportSchedule.class));
+        }
     }
 }
