@@ -101,6 +101,8 @@ export function ComparePage() {
     const country = knownCountries.find(item => item.iso3Code === code)
     return country ? [country] : []
   })
+  const individualCountries = ['IBGE', 'BCB'].includes(selected?.source.code ?? '')
+    ? knownCountries.filter(country => country.iso3Code === 'BRA') : countries
   const unknownCountry = Boolean(catalog.data) && countries.length !== selection.countries.length
   const to = queryYear(params.get('ate'), currentYear)
   const from = Math.min(queryYear(params.get('de'), currentYear - 19), to)
@@ -201,9 +203,9 @@ export function ComparePage() {
           {selected.comparison?.note ?? 'A mesma série e unidade não eliminam diferenças entre definições nacionais, pesquisas, cobertura e revisões. Consulte a metodologia antes de interpretar diferenças entre países.'}
         </p>
         {!comparisonAllowed ? <div className="border-y border-border py-8 text-sm leading-6 text-muted-foreground">
-          <p>Esta série pode ser consultada nos perfis individuais. A comparação entre países está indisponível devido às diferenças metodológicas.</p>
+          <p>Esta série pode ser consultada nos perfis individuais. A comparação entre países está indisponível devido à definição ou à cobertura da série.</p>
           <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs">
-            {countries.map(country => <Link
+            {individualCountries.map(country => <Link
               key={country.iso3Code}
               className="text-link"
               to={{ pathname: `/paises/${country.iso3Code}`, search: new URLSearchParams({ indicador: indicatorCode, serie: selected.id, de: String(from), ate: String(to) }).toString() }}

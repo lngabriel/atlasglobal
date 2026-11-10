@@ -167,10 +167,12 @@ export function CountryDashboard({ code, standalone = false }: { code: string; s
           </label>
         </div>
         {selected && <p className="mb-4 text-xs leading-6 text-muted-foreground">
-          {categoryLabel(selected.indicator.category)} · <Link
+          {categoryLabel(selected.indicator.category)} · {selected.series.comparison?.allowed === false ? (
+            <span>{selected.series.comparison.note}</span>
+          ) : <Link
             to={`/comparar?paises=${code === 'USA' ? 'USA,BRA' : `${code},USA`}&indicador=${encodeURIComponent(selected.indicator.code)}&serie=${selected.series.id}&de=${from}&ate=${to}`}
             className="text-link"
-          >Comparar este indicador</Link>
+          >Comparar este indicador</Link>}
         </p>}
         {!selected ? <p role="status" className="py-8 text-sm text-muted-foreground">
           A série deste endereço não está disponível. Escolha um indicador acima.

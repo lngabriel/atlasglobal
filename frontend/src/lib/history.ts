@@ -36,15 +36,18 @@ export function annualChange(observations: Observation[], unit: string, indicato
   if (!previous) return null
   const difference = latest.value - previous.value
   const percentageUnit = unit.startsWith('PERCENT_')
+  const giniCoefficient = unit === 'GINI_COEFFICIENT'
   const migrationBalance = indicatorCode === 'SM.POP.NETM'
-  const absolute = percentageUnit || unit === 'YEARS' || unit === 'GINI_INDEX' || unit === 'HOMICIDES_PER_100K' || migrationBalance
+  const absolute = percentageUnit || unit === 'YEARS' || unit === 'GINI_INDEX' || giniCoefficient || unit === 'HOMICIDES_PER_100K' || migrationBalance
   if (!absolute && previous.value === 0) return null
   const change = absolute ? difference : difference / Math.abs(previous.value) * 100
   if (!Number.isFinite(change)) return null
-  const rounded = Math.round((change + Number.EPSILON) * 100) / 100
-  const value = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2, signDisplay: 'exceptZero' }).format(Object.is(rounded, -0) ? 0 : rounded)
+  const fractionDigits = giniCoefficient ? 3 : 2
+  const precision = 10 ** fractionDigits
+  const rounded = Math.round((change + Number.EPSILON) * precision) / precision
+  const value = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: fractionDigits, signDisplay: 'exceptZero' }).format(Object.is(rounded, -0) ? 0 : rounded)
   const suffix = percentageUnit ? ' p.p.' : unit === 'YEARS' ? ' anos'
-    : unit === 'GINI_INDEX' ? ' pontos' : unit === 'HOMICIDES_PER_100K' ? ' por 100 mil'
+    : unit === 'GINI_INDEX' ? ' pontos' : giniCoefficient ? ' no coeficiente' : unit === 'HOMICIDES_PER_100K' ? ' por 100 mil'
       : migrationBalance ? ' pessoas' : '%'
   return { label: `${value}${suffix} vs. ${previous.period}`, period: latest.period, previousPeriod: previous.period }
 }
