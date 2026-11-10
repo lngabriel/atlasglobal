@@ -1,3 +1,5 @@
+import { API_DOCUMENTATION_URL } from '@/services/api-location'
+
 export function AboutPage() {
   return <article className="mx-auto max-w-3xl px-6 py-12 sm:py-16">
     <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Sobre o Atlas Global</p>
@@ -19,7 +21,7 @@ export function AboutPage() {
     </section>
     <section className="mt-8 border-t border-border pt-7"><h2 className="text-base font-semibold">Transparência e acesso livre</h2>
       <p className="mt-3 text-sm leading-7 text-muted-foreground">O projeto tem código aberto e não exige cadastro. As consultas usam dados previamente coletados e armazenados; a data de coleta é exibida junto à atualização da fonte. Revisões na origem podem alterar valores históricos.</p>
-      <div className="mt-4 flex flex-wrap gap-5 text-sm"><a className="text-link" href="https://github.com/lngabriel/atlasglobal" target="_blank" rel="noreferrer">Repositório no GitHub ↗</a><a className="text-link" href="/api/docs">Documentação da API ↗</a><a className="text-link" href="https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets" target="_blank" rel="noreferrer">Termos de uso dos dados ↗</a></div>
+      <div className="mt-4 flex flex-wrap gap-5 text-sm"><a className="text-link" href="https://github.com/lngabriel/atlasglobal" target="_blank" rel="noreferrer">Repositório no GitHub ↗</a><a className="text-link" href={API_DOCUMENTATION_URL}>Documentação da API ↗</a><a className="text-link" href="https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets" target="_blank" rel="noreferrer">Termos de uso dos dados ↗</a></div>
     </section>
   </article>
 }

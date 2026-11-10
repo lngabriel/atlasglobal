@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { ApiError } from '@/services/api'
+import { SlowRequestNotice } from '@/components/query-state'
 import { csvParameters, getCsv, getRateCsv, rateCsvParameters } from '@/services/exports'
 import type { CsvSelection, RateCsvSelection } from '@/services/exports'
 
@@ -48,6 +49,7 @@ export function CsvExportButton({ selection, disabled = false }: { selection: Cs
     <Button type="button" variant="outline" disabled={disabled || busy} aria-busy={busy} onClick={() => void download()}>
       {busy ? 'Preparando CSV…' : 'Exportar CSV'}
     </Button>
+    {busy && <div role="status"><SlowRequestNotice /></div>}
     {error && <p role="alert" className="mt-2 max-w-sm text-left text-xs leading-5 text-muted-foreground">{error}</p>}
   </div>
 }

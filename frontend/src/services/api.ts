@@ -1,3 +1,5 @@
+import { API_TIMEOUT_MS, apiUrl } from './api-location.ts'
+
 export interface Page<T> {
   content: T[]
   page: number
@@ -114,10 +116,10 @@ async function get<T>(path: string, parameters: Record<string, string | number |
   for (const [key, value] of Object.entries(parameters)) {
     if (value !== undefined && value !== '') query.set(key, String(value))
   }
-  const timeout = AbortSignal.timeout(15_000)
+  const timeout = AbortSignal.timeout(API_TIMEOUT_MS)
   const requestSignal = signal ? AbortSignal.any([signal, timeout]) : timeout
   try {
-    const response = await fetch(`/api/v1${path}?${query}`, {
+    const response = await fetch(`${apiUrl(path)}?${query}`, {
       headers: { Accept: 'application/json' },
       credentials: 'omit',
       signal: requestSignal,

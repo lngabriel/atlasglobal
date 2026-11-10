@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:pages": "tsc -b && vite build --mode pages",
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "test": "node --experimental-strip-types --test --experimental-test-isolation=none tests/*.test.ts",

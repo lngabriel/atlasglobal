@@ -1,4 +1,5 @@
 import { ApiError } from './api.ts'
+import { API_TIMEOUT_MS, apiUrl } from './api-location.ts'
 import { rateCountries, validDate } from './policy-rates.ts'
 
 export interface RateCsvSelection { countries: string[]; from: string; to: string }
@@ -39,10 +40,10 @@ export function getRateCsv(selection: RateCsvSelection, signal?: AbortSignal): P
 }
 
 async function getDownload(path: string, parameters: URLSearchParams, signal?: AbortSignal): Promise<Blob> {
-  const timeout = AbortSignal.timeout(15_000)
+  const timeout = AbortSignal.timeout(API_TIMEOUT_MS)
   const requestSignal = signal ? AbortSignal.any([signal, timeout]) : timeout
   try {
-    const response = await fetch(`/api/v1${path}?${parameters}`, {
+    const response = await fetch(`${apiUrl(path)}?${parameters}`, {
       headers: { Accept: 'text/csv, application/problem+json' }, credentials: 'omit', signal: requestSignal,
     })
     if (!response.ok) throw new ApiError(response.status)

@@ -5,10 +5,14 @@ import { rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
-// Full checks use imported data; --smoke verifies a freshly migrated application without upstream calls.
+// Full checks use imported data; --smoke checks a fresh installation; --cold-start-check exercises delayed API recovery.
 // Uses Chrome's DevTools protocol and Node's built-in APIs; no browser SDK needed.
 const base = new URL(process.env.ATLAS_BASE_URL ?? 'http://127.0.0.1:3000')
 const smokeOnly = process.argv.includes('--smoke')
+const coldStartOnly = process.argv.includes('--cold-start-check')
+const browserWaitMilliseconds = Number(process.env.ATLAS_BROWSER_WAIT_MS ?? 16_000)
+assert.ok(Number.isInteger(browserWaitMilliseconds) && browserWaitMilliseconds >= 16_000 && browserWaitMilliseconds <= 120_000,
+  'ATLAS_BROWSER_WAIT_MS must be an integer between 16000 and 120000')
 assert.ok(['http:', 'https:'].includes(base.protocol), 'ATLAS_BASE_URL must use HTTP or HTTPS')
 const screenshotDirectory = process.env.ATLAS_SCREENSHOT_DIR ? resolve(process.env.ATLAS_SCREENSHOT_DIR) : null
 if (screenshotDirectory) mkdirSync(screenshotDirectory, { recursive: true })
@@ -107,7 +111,7 @@ try {
     return result.result.value
   }
   async function waitFor(expression, description = expression) {
-    for (let attempt = 0; attempt < 160; attempt++) {
+    for (let attempt = 0; attempt < Math.ceil(browserWaitMilliseconds / 100); attempt++) {
       if (await evaluate(expression)) return
       await pause(100)
     }
@@ -196,7 +200,29 @@ try {
   await call('Log.enable')
   await call('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloadDirectory, eventsEnabled: true })
   await call('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false })
-  if (smokeOnly) {
+  if (coldStartOnly) {
+    interceptionMode = 'pause'
+    await call('Fetch.enable', { patterns: [{ urlPattern: '*/api/v1/overview*', requestStage: 'Request' }] })
+    await navigate('/')
+    await waitFor("!!document.querySelector('#overview [role=\"status\"]') && document.querySelectorAll('#featured-countries [data-country]').length === 25", 'pending overview with usable country directory')
+    for (let attempt = 0; attempt < 100 && pausedRequests.length === 0; attempt++) await pause(100)
+    assert.ok(pausedRequests.length > 0, 'The actual overview API request must be paused by Chrome')
+    await pause(10_100)
+    await waitFor("document.querySelector('#overview [role=\"status\"]')?.textContent.includes('O serviço de dados pode estar iniciando')", 'delayed service-start notice')
+    assert.equal(await evaluate("!!document.querySelector('#overview [role=\"alert\"]')"), false, 'A delayed response must remain loading rather than report an early failure')
+    await screenshot('cold-start-notice')
+    pass('a delayed API response explains service startup while the country directory remains usable')
+    interceptionMode = null
+    let resumed = 0
+    for (const requestId of pausedRequests.splice(0)) {
+      try { await call('Fetch.continueRequest', { requestId }); resumed++ } catch { /* StrictMode may have cancelled an earlier request. */ }
+    }
+    assert.ok(resumed > 0, 'At least one active overview request must resume')
+    await call('Fetch.disable')
+    await waitFor("!!document.querySelector('#overview') && !document.querySelector('#overview [role=\"status\"]') && !document.querySelector('#overview [role=\"alert\"]') && (document.querySelectorAll('#overview [data-indicator]').length > 0 || document.querySelector('#overview').textContent.includes('Os agregados mundiais ainda não estão disponíveis'))", 'overview recovered after delayed API response')
+    assert.equal(await evaluate("document.querySelector('#overview').textContent.includes('O serviço de dados pode estar iniciando')"), false, 'The service-start notice must disappear after recovery')
+    pass('the resumed API response restores the overview without a stale loading notice or fabricated values')
+  } else if (smokeOnly) {
     await navigate('/')
     await waitFor("document.querySelectorAll('#featured-countries [data-country]').length === 25")
     pass('the public home directory renders all selected country links without seeded observations')
