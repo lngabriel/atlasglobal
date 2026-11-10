@@ -32,10 +32,10 @@ class OpenApiConfiguration {
                 .addProperty("instance", new Schema<>().type("string"));
             addError(operation, "400", "Parâmetros inválidos", problem);
             addError(operation, "500", "Falha interna com mensagem pública genérica", problem);
-            if (route.contains("{")) addError(operation, "404", "Recurso não encontrado", problem);
-            if (route.endsWith("/history") || (route.startsWith("/api/v1/countries/")
+            if (route.contains("{") || route.startsWith("/api/v1/exports/")) addError(operation, "404", "Recurso não encontrado", problem);
+            if (route.endsWith("/history") || route.endsWith("/ranking") || route.startsWith("/api/v1/exports/") || (route.startsWith("/api/v1/countries/")
                     && route.endsWith("/indicators/{indicatorCode}"))) {
-                addError(operation, "409", "Mais de uma série disponível; selecione seriesId", problem);
+                addError(operation, "409", "Selecione uma série explícita ou consulte a restrição metodológica e de cobertura", problem);
             }
         }));
     }
