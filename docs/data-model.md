@@ -10,6 +10,9 @@ erDiagram
     INDICATOR_SERIES ||--o{ INDICATOR_OBSERVATION : contains
     INDICATOR_SERIES ||--o{ WORLD_INDICATOR_OBSERVATION : contains
     DATA_SOURCE ||--o{ DATA_IMPORT : records
+    COUNTRY ||--o{ POLICY_RATE_SERIES : has
+    DATA_SOURCE ||--o{ POLICY_RATE_SERIES : publishes
+    POLICY_RATE_SERIES ||--o{ POLICY_RATE_OBSERVATION : contains
 ```
 
 ## Entities
@@ -21,6 +24,8 @@ erDiagram
 - **IndicatorObservation:** country, series, year, arbitrary-precision numeric value, AVAILABLE/MISSING status, provider status, source update date, and import timestamp. Unique by country, series, and year. Unit, methodology, and source are identified through the series foreign key.
 - **WorldIndicatorObservation:** the same annual value and provenance fields, with a series foreign key and no country foreign key. Unique by series and year. Its implicit scope is the World Bank's published `WLD` aggregate; these records never represent a sum or average computed from country observations.
 - **DataImport:** provider, requested scope, timestamps, status, processed record count, and sanitized failure information.
+- **PolicyRateSeries:** country, source, external code, native daily frequency, instrument, methodology, source organization, and scope note. Unique by country, source, and external code; distinct from annual `IndicatorSeries`.
+- **PolicyRateObservation:** series, full reference date, arbitrary-precision numeric value, AVAILABLE/MISSING status, provider status, optional statistical revision date, and collection timestamp. Unique by series/date. Flyway V5 adds both policy tables without altering annual data.
 
 Foreign keys restrict deletion. Entity references are mapped as UUIDs rather than eager object graphs. PostgreSQL enforces referential integrity. This avoids accidental relationship loading during ingestion; read models can use explicit projections when needed.
 
@@ -45,3 +50,5 @@ A provider-specific session-level PostgreSQL advisory lock prevents overlapping 
 Observations are indexed by series/year/value for analytical queries, with a unique index covering country/series/year histories. Import history is indexed by provider/start time.
 
 IBGE and BCB imports require Brazil in the operational scope and write only Brazilian observations. Their national comparison policy and country-summary visibility are enforced in the query layer, without adding user entities, provider-specific observation tables, or a separate schema for each source. Explicit historical queries for another country remain empty. The [Brazilian adapter reference](integrations/brazil.md) documents the selected definitions.
+
+Daily policy-rate definitions share one provider-independent model across BCB, BIS, and NBU. They reuse the source catalog and import audit, with transactional per-country definition/observation/progress upserts. Daily keys preserve source dates; no annual average or fabricated calendar expansion is stored. The annual BCB household-debt model and definition remain unchanged. See the [policy-rate reference](integrations/policy-rates.md).

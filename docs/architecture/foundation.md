@@ -1,23 +1,30 @@
 # Application architecture
 
-Atlas Global uses a modular Spring Boot monolith and a separate React frontend. PostgreSQL stores country identities, indicator definitions, source-specific annual series, country and world observations, and import history. Access is public; no accounts, authentication, or user-related tables exist.
+Atlas Global uses a modular Spring Boot monolith and a separate React frontend. PostgreSQL stores country identities, source-specific annual statistics, dated policy-rate series, country and world observations, and import history. Access is public; no accounts, authentication, or user-related tables exist.
 
 ## Backend boundaries
 
 - `country`, `indicator`, `observation`, and `source` contain domain mappings and public query controllers, services, repositories, and response DTOs.
 - `overview` queries the World Bank's published world aggregates independently of the country catalog.
+- `ranking` computes source-specific single-year country rankings and explicit catalog coverage within one database snapshot.
+- `export` generates complete annual CSV downloads using the existing history validation and comparison rules.
+- `policyrate` owns daily instrument definitions, dated observation storage, public latest/history/CSV queries, and coordinated periodic imports.
 - `ingestion` defines normalized provider records, transactional storage, provider import coordination, internal commands, and optional World Bank scheduling.
 - `integration/worldbank` owns HTTP configuration, provider DTOs, pagination, retries, metadata validation, and normalization for 24 WDI definitions.
 - `integration/oecd` owns bounded annual CSV decoding, explicit dimension selection, price-base handling, retries, and imports for three OECD definitions.
 - `integration/ibge` validates PNAD Contínua annual table metadata, national geography, variables, classifications, data symbols, and real-income price bases for two Brazilian definitions.
-- `integration/bcb` decodes monthly SGS observations and retains only actual December records of completed years for one explicitly named national definition.
+- `integration/bcb` decodes SGS observations: actual December records of completed years for household debt, and native daily SGS 432 dates for Meta Selic. The definitions remain distinct.
+- `integration/bis` validates daily WS_CBPOL SDMX dimensions, national instrument metadata, exact values, and missing observations.
+- `integration/nbu` supplies the official Ukrainian key-policy-rate fallback with bounded historical requests.
 - `shared` contains explicit CORS configuration, bounded pagination, safe MVC errors, and OpenAPI configuration.
 
 External response DTOs do not cross provider boundaries. Provider-independent source and series definitions feed parameterized PostgreSQL upserts. Flyway owns the schema; Hibernate validates mappings rather than modifying tables.
 
 Country, indicator, and source catalogs use parameterized Spring Data JPA queries. Historical and latest-value projections use parameterized JDBC queries inside read-only service transactions. Responses preserve one series definition, source, unit, and annual frequency. Ambiguous histories require an explicit series ID. Query requests never call external providers.
 
-The public series response includes a comparison policy with an `allowed` flag and an explanatory `note`. Multi-country history checks this policy before returning data. National poverty lines remain available for individual histories but are blocked for direct country comparison because their thresholds differ by country. IBGE and BCB definitions are blocked because they provide national Brazilian coverage rather than harmonized country observations. Other definitions carry methodological context rather than implying complete harmonization.
+The annual series response includes a comparison policy with an `allowed` flag and an explanatory `note`. Multi-country history, rankings, and multi-country CSV downloads enforce it. National poverty lines remain available for individual histories but are blocked for direct country comparison because their thresholds differ by country. Annual IBGE and BCB definitions are blocked because they provide national Brazilian coverage rather than harmonized country observations. Other definitions carry methodological context rather than implying complete harmonization.
+
+Policy rates use a separate dated model and API because daily dates and national policy instruments cannot fit the annual history contract faithfully. The shared country selector and CSV text handling are reused. Cross-country rate queries retain each instrument's original source and methodology instead of asserting one harmonized definition. Flyway V5 adds daily tables without changing annual observation keys, queries, or comparison restrictions.
 
 Read the [API reference](../api.md), [data model](../data-model.md), [coverage reference](../data-coverage.md), [World Bank adapter documentation](../integrations/world-bank.md), and [Brazilian adapter documentation](../integrations/brazil.md).
 
@@ -45,7 +52,7 @@ Published Compose ports bind to localhost. Actuator uses a separate loopback int
 
 The World Bank, OECD, IBGE, and BCB operational commands run internally and exit after completion. A shared guard rejects multiple enabled one-shot flags in one process. All use the configured `atlas.import` year scope; additional providers run after country catalog import and require no API credentials. National commands require `BRA` in the configured scope and import only Brazil. Provider-specific PostgreSQL advisory locks prevent overlapping imports of the same source across application instances. Completed batches are idempotent, and observations outside the requested scope remain unchanged.
 
-Scheduling is opt-in and refreshes World Bank data only. Any provider one-shot command suppresses scheduled World Bank jobs. OECD, IBGE, and BCB refreshes use their manual commands. Ordinary application startup performs no upstream requests unless the World Bank schedule or an import command is explicitly enabled.
+World Bank scheduling remains opt-in. The separate policy-rate schedule refreshes the last 45 days at 04:00 UTC daily; Compose enables it by default, while local Java defaults to disabled. All five one-shot command flags are mutually exclusive and suppress both schedules. Annual OECD, IBGE, and BCB household-debt refreshes remain manual. Startup does not immediately fetch provider data; operational commands and enabled scheduled executions perform the imports. See the [policy-rate source and operations reference](../integrations/policy-rates.md).
 
 ## Frontend
 
@@ -57,6 +64,9 @@ React Router separates the entry directory from the full data workspace:
 | `/explorar` | Complete country catalog with paginated name/ISO search, region and income filters, and the shared dashboard. |
 | `/paises/:iso3Code` | Individual country metadata, category navigation, latest values, and annual histories. |
 | `/comparar` | Two to five countries, one indicator, and one explicit source-specific series. |
+| `/rankings` | One annual series and reference year, ordering, coverage, and paginated country positions. |
+| `/mapa` | Local interactive world geometry, country selector, persisted headlines, and profile access. |
+| `/juros` | Latest dated rates, historical chart/table, source methodology, date filters, country comparison, and CSV. |
 | `/sobre` | Product, sources, and interpretation guidance. |
 
 The home country names follow the product's Brazilian Portuguese selection. Its search matches names without case/diacritic sensitivity and accepts ISO codes. The full catalog remains accessible independently of this selection. The interface uses text, restrained typography, native controls, and a monochrome light/dark palette without decorative emoji. Only the display theme is stored in localStorage; country selection, filters, indicator, series, and period are represented in URL parameters.
@@ -68,6 +78,10 @@ Recharts renders historical and comparison charts in lazy-loaded bundles. Access
 `services/api.ts` owns typed HTTP contracts, localized safe errors, timeouts, and complete collection retrieval. Query hooks integrate these requests with TanStack Query using country sets, series, and interval in cache keys. Obsolete requests are canceled; permanent client errors are not retried. Failed or inconsistent pages reject a history instead of presenting partial data. Search results remain paginated, while a separately cached full catalog supplies filter and comparison options. World highlights use their own overview query.
 
 Presentation helpers format units in Brazilian Portuguese and preserve the distinction between zero and unavailable values. Gini coefficients retain three decimal places in values, axes, and absolute annual changes. IBGE income labels retain the monthly per-person meaning and price base; BCB debt labels retain their distinct denominator. Null placeholders interrupt chart lines without creating source observations. Annual changes require numeric observations from consecutive years in the same series; appropriate unit-specific differences are used. The default interval covers 20 calendar years through the current UTC year, with 10-year, 20-year, since-1960, and validated custom intervals. Loading, empty, and failure states do not manufacture figures.
+
+Rankings display the selected year's partial coverage and preserve tied positions across pages. The map lazy-loads React Leaflet and a local public-domain Natural Earth geometry file; no external tile provider or statistical values from geometry are used. Simplified geographic coverage is independent of the complete country selector. Policy-rate charts use original daily dates and gaps, with a separate most-recent-common-date indication. Country profiles link to those dated histories without merging them into annual rows.
+
+CSV downloads request a complete snapshot from the backend, not a chart subset or one API page. Selection changes abort obsolete downloads, and only successful complete responses create an attachment. Annual and policy-rate exports share the download component and transport handling while retaining their different period contracts.
 
 ## Configuration and operations
 

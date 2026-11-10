@@ -1,8 +1,8 @@
 # Data coverage and comparability
 
-Atlas Global stores annual series published by official providers. A catalog entry does not guarantee that a country has observations, that every year is present, or that the most recent year matches another series. The interface preserves each value's reference year, unit, provider, methodology, and collection date. Missing observations and years without a record remain unavailable; neither is converted to zero.
+Atlas Global stores official annual statistics and dated daily policy rates. A catalog entry does not guarantee that a country has observations, that every period is present, or that its latest reference period matches another series. The interface preserves each value's date, unit, provider, methodology, and collection timestamp. Missing observations and periods without a record remain unavailable; neither is converted to zero.
 
-The catalog defines 30 indicators: 24 WDI definitions, three OECD definitions, two IBGE definitions, and one BCB definition. National sources complement international coverage while retaining their own indicator identities.
+The annual catalog defines 30 indicators: 24 WDI definitions, three OECD definitions, two IBGE definitions, and one BCB definition. An additional dated measure, `POLICY.RATE`, retains daily observations from BCB, BIS, and NBU in a separate model. National sources complement international coverage while retaining their own identities.
 
 ## Supported measures
 
@@ -10,6 +10,7 @@ The catalog defines 30 indicators: 24 WDI definitions, three OECD definitions, t
 | --- | --- | --- |
 | Household indebtedness | OECD debt of households and non-profit institutions serving households, as a percentage of net disposable income | A debt-to-income ratio; neither the percentage of indebted households nor debt as a share of GDP. |
 | Brazilian household indebtedness | BCB household debt with the national financial system, relative to restricted gross national disposable household income (RNDBF) accumulated over twelve months | The actual December observation for each completed year. The restricted denominator excludes gross operating surplus and property income; this is not the OECD ratio to net disposable income. |
+| Policy rates | BCB Meta Selic (SGS 432), BIS daily policy instruments, and the NBU key policy rate | Percent per year is the unit, not an annual observation frequency. Targets, repo rates, discount rates, and target-band midpoints retain their different definitions and dates. |
 | Average wages | OECD gross average annual wages per full-time-equivalent dependent employee, in constant US dollars at PPP | Annual gross remuneration, not monthly take-home pay. The price base is part of the series definition. |
 | Minimum wages | OECD real annual statutory minimum wages, in constant US dollars at PPP | A common annual pay period; statutory arrangements and country coverage differ. A missing observation does not establish that a country has no minimum wage. |
 | Purchasing-power context | WDI GDP per capita in current international dollars at PPP | Economic output per person adjusted for price levels. This is neither a wage nor a direct index of household buying power. |
@@ -72,6 +73,16 @@ The home selection is editorial navigation, not a definition of worldwide covera
 IBGE and BCB summaries appear only for Brazil. The public indicator catalog still exposes these definitions and their coverage notes. An explicit single-country historical request outside that national coverage returns an empty observation collection rather than inventing values. International definitions remain visible when a country's observations are missing.
 
 The global highlights use the World Bank's published `WLD` observations for GDP, population, life expectancy, and Internet use. They are stored separately from country observations. They are not sums or averages of the home selection, and their reporting years can differ.
+
+## Rankings, geography, and dated rates
+
+Annual rankings compare one source-specific series in one reference year. Coverage uses all catalog countries/economies as its denominator and explicitly identifies partial statistical coverage. Values from other years are not used to complete the list. A position among imported observations is not necessarily a complete worldwide position.
+
+The world map uses local Natural Earth geometry solely for navigation. Simplified boundaries omit some small countries and territories; a complete country selector remains available. Geometry neither supplies indicator values nor establishes statistical coverage. See its [provenance and public-domain reference](../frontend/public/geodata/README.md).
+
+Policy-rate summaries show each country's latest numeric observation and its own date. Historical comparisons align actual daily dates and identify the most recent common numeric date, without carrying values forward. Publication frequency can lag observation frequency: BIS updates normally arrive weekly, while BCB and NBU can provide newer daily references. Collection time is not a policy-decision date or a validated statistical revision date.
+
+The validated default selection has policy-rate history for 20 countries and territories, of which 19 have 2026 observations in the checked release. The Argentina series is historical: BIS documents that the country stopped adopting a policy interest rate in July 2025. The interface preserves its published history and flags the final value as historical, rather than a current rate. Paraguay, Singapore, Taiwan, Venezuela, and Vietnam have no validated integrated policy-rate series; no current market-rate proxies are substituted. Singapore's exchange-rate framework is not represented as a missing SORA-based policy target. The [policy-rate source reference](integrations/policy-rates.md) records official investigations, country mappings, operational scope, and remaining limitations.
 
 ## Official methodology references
 

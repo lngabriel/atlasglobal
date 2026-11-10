@@ -2,15 +2,15 @@
 
 [GitHub](https://github.com/lngabriel/atlasglobal)
 
-Atlas Global is an open-source platform for exploring public international data. Its backend imports World Bank and OECD statistics, complemented by Brazilian national series from IBGE and Banco Central do Brasil, into PostgreSQL. Each series preserves its definition, unit, price basis, reference period, provenance, and missing values. Access is public and free, without accounts or authentication.
+Atlas Global is an open-source platform for exploring public international data. Its backend imports World Bank and OECD statistics, complemented by national series from IBGE and Banco Central do Brasil, into PostgreSQL. Dated policy rates use official BCB, BIS, and National Bank of Ukraine sources. Each series preserves its definition, unit, price basis, reference period, provenance, and missing values. Access is public and free, without accounts or authentication.
 
-The home page presents a focused selection of 25 countries and territories, published world aggregates, and access to country comparison. Country profiles combine indicator summaries, historical charts, and source documentation in a responsive editorial layout with light and dark themes. The interface is in Brazilian Portuguese; the public REST API also supports independent clients.
+The home page presents a focused selection of 25 countries and territories, published world aggregates, and access to country comparison. Country profiles combine indicator summaries, historical charts, and source documentation. Rankings use a single reference year with explicit coverage; the world map provides geographic navigation. Historical data and comparisons can be downloaded as CSV. The responsive editorial interface supports light and dark themes and uses Brazilian Portuguese; the public REST API also supports independent clients.
 
 ## Stack
 
 - **Backend:** Java 21, Spring Boot 3, Spring Web, Spring Data JPA, Hibernate, Validation, Actuator, and Springdoc OpenAPI.
-- **Data:** PostgreSQL 17 and Flyway, with World Bank, OECD, IBGE, and Banco Central adapters and transactional batch imports.
-- **Frontend:** React, TypeScript, Vite, Tailwind CSS, shadcn/ui, React Router, TanStack Query, and Recharts 3.
+- **Data:** PostgreSQL 17 and Flyway, with World Bank, OECD, IBGE, BCB, BIS, and NBU adapters and transactional imports.
+- **Frontend:** React, TypeScript, Vite, Tailwind CSS, shadcn/ui, React Router, TanStack Query, Recharts 3, and React Leaflet 5 with Leaflet 1.9.
 - **Runtime:** Docker Compose, with separate backend, frontend, and database services.
 
 ## Quick start
@@ -51,8 +51,11 @@ The home selection contains exactly these countries and territories, displayed u
 - **Complete explorer (`/explorar`):** the full country/economy catalog, with name/ISO search, region and income filters, and pagination. Countries outside the home selection remain accessible.
 - **Country profiles (`/paises/:iso3Code`):** headline indicators, category navigation, all available series, and a selected annual history. Each value retains its own reference year, which may differ from another indicator's year.
 - **Comparison (`/comparar`):** select two to five countries, one indicator, and one explicit source-specific series. The summary uses the latest year in the selected interval with numeric values for every selected country. If there is no common year, it reports that absence rather than carrying earlier values forward.
+- **Rankings (`/rankings`):** order the countries with numeric values for one source-specific series and one selected year. The default is the most recent year containing a numeric country observation. Coverage states how many countries/economies in the catalog have data; missing countries are excluded from the table and remain counted as unavailable. Equal values share their rank. The web view initially orders values from highest to lowest and supports ascending order and pagination.
+- **World map (`/mapa`):** select a country on the map or through the complete country selector, view its persisted headline indicators, and open its profile. Simplified boundaries can omit small countries and territories; the selector provides access independently of map geometry.
+- **Policy rates (`/juros`):** latest available rates in percent per year, dated historical charts and tables, period filters, CSV export, and comparison of one to five countries. Each national instrument retains its own date and methodology. Unavailable coverage is explicit.
 
-Historical views default to 20 calendar years through the current UTC year. Use the 10-year, 20-year, or since-1960 presets, or enter a custom interval. Open **Ver dados em tabela** for accessible annual values. Charts and tables distinguish an explicit missing value from a year without an imported record; neither is replaced by zero or interpolated.
+Annual historical views default to 20 calendar years through the current UTC year. Use the 10-year, 20-year, or since-1960 presets, or enter a custom interval. Open **Ver dados em tabela** for accessible annual values. Charts and tables distinguish an explicit missing value from a year without an imported record; neither is replaced by zero or interpolated. Daily policy-rate histories use a separate one-year default and date filter.
 
 Expand **Definição e procedência** to inspect the original definition, unit, organization, dataset, and documentation. Comparison views display methodological limitations. National poverty lines and Brazil-only IBGE/BCB definitions are excluded from direct country comparisons. Brazilian national series appear in Brazil's profile without replacing international definitions. Sharing a provider and code does not remove survey, coverage, or national-definition differences; read the [coverage and comparability reference](docs/data-coverage.md).
 
@@ -62,9 +65,20 @@ Selection and filters are represented in the URL, allowing views to be bookmarke
 http://localhost:3000/paises/BRA?indicador=SP.POP.TOTL&de=2000&ate=2024
 http://localhost:3000/explorar?pais=BRA&categoria=ECONOMY
 http://localhost:3000/comparar?paises=BRA,USA&indicador=SP.POP.TOTL&de=2000&ate=2024
+http://localhost:3000/rankings?indicador=SP.POP.TOTL&ano=2024&ordem=desc
+http://localhost:3000/mapa?pais=BRA
+http://localhost:3000/juros?paises=BRA,USA&de=2026-01-01&ate=2026-11-10
 ```
 
 A catalog entry does not guarantee observations. Taiwan's identity is retained from the official IMF country catalog, without inventing WDI observations or unavailable demographic metadata. Countries outside the home selection remain accessible through the complete explorer; changing the import scope does not delete their existing histories.
+
+The map serves a local [Natural Earth geometry layer](frontend/public/geodata/README.md), distributed in the public domain. It loads no external map tiles. Natural Earth supplies shapes and country identifiers only; the statistics shown beside the map come from the same persisted API as country profiles. The geometry layer does not define statistical coverage or add countries to the catalog.
+
+### Download historical data
+
+Use **Exportar CSV** in a country history or an available comparison to download the selected countries, indicator, source-specific series, and interval. The file includes every matching observation across the interval, rather than just a visible chart segment or API page. Changing the selection cancels an in-progress download; failed requests display a retryable error without downloading partial data.
+
+CSV files use UTF-8 with a byte-order mark, commas, CRLF record endings, and machine-readable column names. Decimal values retain their original precision and decimal point; negative values remain numeric. Explicit missing observations have an empty value and `MISSING` status, while years without an imported observation do not generate rows. Source, unit, dataset, series identity, and provenance dates accompany each value. The [API reference](docs/api.md#csv-export) describes the columns and spreadsheet text handling.
 
 ## Public API
 
@@ -81,9 +95,11 @@ curl --fail 'http://localhost:3000/api/v1/overview'
 curl --fail 'http://localhost:3000/api/v1/countries?q=Brasil&page=0&size=20'
 curl --fail 'http://localhost:3000/api/v1/indicators?category=ECONOMY&source=WORLD_BANK'
 curl --fail 'http://localhost:3000/api/v1/countries/BRA/indicators/NY.GDP.MKTP.CD?from=2020&to=2024'
+curl --fail 'http://localhost:3000/api/v1/indicators/NY.GDP.MKTP.CD/ranking?year=2024&direction=desc'
+curl --fail --output atlas-global.csv 'http://localhost:3000/api/v1/exports/indicators?indicator=SP.POP.TOTL&countries=BRA,USA&from=2020&to=2024'
 ```
 
-Country searches support names, ISO codes, region, and income filters. Indicator searches support name/code, category, and source filters. Collections are paginated, with at most 100 records per page and explicit allowed sort fields. Historical responses include units, source metadata, missing-value status, and a comparison policy; ambiguous indicators require an explicit `seriesId`. Multi-country requests for blocked national definitions return HTTP 409.
+Country searches support names, ISO codes, region, and income filters. Indicator searches support name/code, category, and source filters. Collections are paginated, with at most 100 records per page and explicit allowed sort fields. Historical responses include units, source metadata, missing-value status, and a comparison policy; ambiguous indicators require an explicit `seriesId`. Rankings, multi-country histories, and multi-country CSV exports enforce the series comparison policy. A single-country export remains available for a national definition.
 
 All queries are public and require no account, token, or authentication header. The API has no public write, import, or administrative operations.
 
@@ -110,9 +126,9 @@ docker compose run --rm --no-deps backend \
   --atlas.import.to-year=2024
 ```
 
-The process exits after importing and returns a nonzero exit code on failure. Scheduled jobs are disabled in any provider's one-shot process, even when scheduling is enabled in the environment. The World Bank, OECD, IBGE, and BCB one-shot flags are mutually exclusive; run one provider per process. Repeating a command updates existing observations without creating duplicates. Previously stored periods outside the requested interval remain unchanged.
+The process exits after importing and returns a nonzero exit code on failure. Scheduled jobs are disabled in any provider's one-shot process, even when scheduling is enabled in the environment. The World Bank, OECD, IBGE, BCB, and policy-rate one-shot flags are mutually exclusive; run one command per process. Repeating a command updates existing observations without creating duplicates. Previously stored periods outside the requested interval remain unchanged.
 
-Scheduled refreshes are disabled by default. Set `WORLD_BANK_SCHEDULE_ENABLED=true` to enable a weekly refresh at 03:00 UTC on Sunday. This schedule refreshes World Bank data only, covering the last six calendar years through the configured end year; run a full historical import periodically to capture older revisions. OECD, IBGE, and BCB imports are manual. `WORLD_BANK_IMPORT_CRON` accepts a Spring six-field cron expression.
+World Bank scheduled refreshes are disabled by default. Set `WORLD_BANK_SCHEDULE_ENABLED=true` to enable a weekly refresh at 03:00 UTC on Sunday. This schedule refreshes World Bank data only, covering the last six calendar years through the configured end year; run a full historical import periodically to capture older revisions. OECD, IBGE, and the annual BCB household-debt import are manual. `WORLD_BANK_IMPORT_CRON` accepts a Spring six-field cron expression. Dated policy rates have a separate daily schedule described below.
 
 Inspect import history and coverage:
 
@@ -163,9 +179,28 @@ The BCB adapter imports household indebtedness with the Brazilian financial syst
 
 National definitions remain distinct from international series and cannot be used for direct cross-country comparison. Read the [Brazilian adapter reference](docs/integrations/brazil.md) for dataset codes, methodology, and data-symbol handling.
 
+## Import policy rates
+
+After importing the country catalog, load the historical policy rates:
+
+```bash
+docker compose run --rm --no-deps backend \
+  --spring.main.web-application-type=none \
+  --atlas.policy-rates.run-once=true
+```
+
+The command imports dates from `2010-01-01` through today in UTC for the configured country scope. Brazil uses BCB SGS 432 (Meta Selic); other covered countries use the BIS daily policy-rate series, with an official NBU fallback for Ukraine. Rates are stored as daily observations, separately from annual indicators. No annual averaging, interpolation, or proxy substitution is performed.
+
+Compose enables a refresh of the last 45 days at **04:00 UTC daily**. Set `POLICY_RATE_SCHEDULE_ENABLED=false` to disable it. Local Java execution defaults to scheduling disabled. Run the full command periodically for older revisions. See the [policy-rate reference](docs/integrations/policy-rates.md) for source-specific retries, historical bounds, country coverage, and methodological limitations. Some countries have no validated integrated series; the interface reports their unavailability.
+
+```bash
+curl --fail 'http://localhost:3000/api/v1/policy-rates?countries=BRA,USA'
+curl --fail 'http://localhost:3000/api/v1/policy-rates/history?countries=BRA,USA&from=2026-01-01&to=2026-11-10'
+```
+
 ## Data sources and coverage
 
-The import catalogs define **30 indicators: 24 from World Development Indicators (WDI source 2), three from the OECD, two from IBGE, and one from BCB**. An indicator definition does not imply that every country or year has a value.
+The annual import catalogs define **30 indicators: 24 from World Development Indicators (WDI source 2), three from the OECD, two from IBGE, and one from BCB**. Policy rate is an additional dated measure (`POLICY.RATE`) with a separate daily model and API. An indicator definition does not imply that every country or period has a value.
 
 | Subject | Integrated measures |
 | --- | --- |
@@ -176,6 +211,7 @@ The import catalogs define **30 indicators: 24 from World Development Indicators
 | Migration | Net migration and international migrant stock, in persons and as a population percentage. |
 | Wages and household finances | OECD average annual wages, real annual minimum wages, and household debt relative to net disposable income. |
 | Brazilian national series | IBGE Gini coefficient and real monthly household income per person; BCB household indebtedness in December relative to restricted RNDBF accumulated over twelve months. |
+| Monetary policy | Daily policy instruments from BCB, BIS, and NBU, in percent per year, with original dates and national methodologies. |
 
 [World Bank Indicators API v2](https://datahelpdesk.worldbank.org/knowledgebase/articles/889392) supplies the WDI data, including original source-organization metadata. [OECD SDMX](https://www.oecd.org/en/data/insights/data-explainers/2024/09/api.html) supplies the earnings and household-debt series. The [IBGE Aggregates API](https://servicodados.ibge.gov.br/api/docs/agregados?versao=3) and [BCB SGS](https://dadosabertos.bcb.gov.br/) supply the national definitions. Query endpoints read persisted data rather than calling these providers.
 
@@ -245,10 +281,13 @@ java -jar backend/target/atlas-global-0.1.0-SNAPSHOT.jar \
 | `BACKEND_PORT`, `FRONTEND_PORT` | Published ports, default 8080 and 3000. |
 | `CORS_ALLOWED_ORIGINS` | Exact allowed browser origins, comma-separated; no wildcards. |
 | `WORLD_BANK_COUNTRIES` | Shared comma-separated observation scope; defaults to the 24 home-selection codes supported by WDI, excluding Taiwan. National commands require `BRA` and use only Brazil. |
-| `WORLD_BANK_FROM_YEAR` | First import year for all providers, default 1960. |
+| `WORLD_BANK_FROM_YEAR` | First annual import year, default 1960; policy rates use their separate date interval. |
 | `WORLD_BANK_TO_YEAR` | Last import year; 0 means the current UTC year. The BCB December series ends at the latest completed calendar year. |
 | `WORLD_BANK_SCHEDULE_ENABLED` | Enables scheduled imports, default `false`. |
 | `WORLD_BANK_IMPORT_CRON` | Refresh schedule, default `0 0 3 * * SUN`, evaluated in UTC. |
+| `POLICY_RATE_FROM` | First policy-rate import date, default `2010-01-01`. |
+| `POLICY_RATE_SCHEDULE_ENABLED` | Daily policy-rate refresh: default `true` in Compose, `false` for local Java execution. |
+| `POLICY_RATE_IMPORT_CRON` | Policy-rate schedule, default `0 0 4 * * *`, evaluated in UTC. |
 | `MANAGEMENT_PORT`, `MANAGEMENT_ADDRESS` | Operational health endpoint, default 8081 and 127.0.0.1. |
 
 The Compose setup binds published ports to localhost. It is a local development configuration; keep management endpoints private in any deployment.
@@ -294,7 +333,7 @@ npm run typecheck
 npm run build
 ```
 
-Frontend unit tests use Node.js 22's built-in test runner. They verify API pagination and cancellation, safe errors, formatting, missing-value handling, and historical calculations without requiring a running backend. The frontend Docker build runs these tests before compiling the production bundle.
+Frontend unit tests use Node.js 22's built-in test runner. They verify API pagination and cancellation, safe errors, formatting, missing-value handling, historical calculations, ranking contracts, CSV downloads, and local geometry validation without requiring a running backend. The frontend Docker build runs these tests before compiling the production bundle.
 
 For browser checks, start the Compose services and complete the documented imports, then run:
 
@@ -313,14 +352,15 @@ Use `npm ci` to reproduce the dependency versions in `package-lock.json`. Consul
 backend/         Spring Boot application, provider adapters, migrations, and tests
 frontend/
   src/app/       Route configuration
-  src/pages/     Home directory, complete explorer, country profile, comparison, and project information
-  src/components/  World highlights, search, dashboards, historical/comparison charts, and reusable UI
+  src/pages/     Home directory, explorer, country profile, comparison, rankings, policy rates, world map, and project information
+  src/components/  World highlights, dashboards, historical/comparison charts, CSV downloads, and map canvas
   src/hooks/     Query hooks and display theme
   src/services/  Typed API client and query cache configuration
-  src/lib/       Formatting, country labels, and historical transformations
+  src/lib/       Formatting, country labels, historical transformations, and geometry matching
+  public/geodata/  Local world geometry and its provenance/license reference
   tests/         Unit tests and browser checks
 infrastructure/  Local runtime configuration guidance
 docs/            Technical architecture, data model, and provider documentation
 ```
 
-Technical references: [API reference](docs/api.md), [architecture](docs/architecture/foundation.md), [data model](docs/data-model.md), [coverage and comparability](docs/data-coverage.md), [World Bank integration](docs/integrations/world-bank.md), and [Brazilian integrations](docs/integrations/brazil.md).
+Technical references: [API reference](docs/api.md), [architecture](docs/architecture/foundation.md), [data model](docs/data-model.md), [coverage and comparability](docs/data-coverage.md), [World Bank integration](docs/integrations/world-bank.md), [Brazilian integrations](docs/integrations/brazil.md), and [policy rates](docs/integrations/policy-rates.md).
