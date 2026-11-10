@@ -46,6 +46,10 @@ management:
         readiness:
           include: readinessState,db
 atlas:
+  policy-rates:
+    from: ${POLICY_RATE_FROM:2010-01-01}
+    schedule-enabled: ${POLICY_RATE_SCHEDULE_ENABLED:false}
+    cron: ${POLICY_RATE_IMPORT_CRON:0 0 4 * * *}
   import:
     run-once: ${WORLD_BANK_IMPORT_ONCE:false}
     schedule-enabled: ${WORLD_BANK_SCHEDULE_ENABLED:false}

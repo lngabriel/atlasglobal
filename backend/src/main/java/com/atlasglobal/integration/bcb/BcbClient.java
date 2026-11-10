@@ -1,6 +1,7 @@
 package com.atlasglobal.integration.bcb;
 
 import com.atlasglobal.ingestion.ProviderData;
+import com.atlasglobal.policyrate.PolicyRateData;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,7 +46,7 @@ class BcbClient {
         // Monthly SGS 29037 starts in 2005. Small bounded requests also avoid very large responses.
         for (int first = Math.max(2005, from); first <= end; first += 10) {
             int last = Math.min(first + 9, end);
-            String body = request(LocalDate.of(first, 1, 1), LocalDate.of(last, 12, 31));
+            String body = request(29037, LocalDate.of(first, 1, 1), LocalDate.of(last, 12, 31));
             result.addAll(decode(body, first, last));
         }
         result.sort(Comparator.comparingInt(ProviderData.Observation::year));
@@ -53,10 +54,36 @@ class BcbClient {
         return new ProviderData.Batch(result, null);
     }
 
-    private String request(LocalDate from, LocalDate to) {
+    List<PolicyRateData.Point> policyRate(LocalDate from, LocalDate to) {
+        if (to.isBefore(from) || to.isAfter(LocalDate.now(clock))) throw new IllegalArgumentException("Invalid BCB policy-rate interval");
+        var points = new ArrayList<PolicyRateData.Point>();
+        for (LocalDate start = from.isBefore(LocalDate.of(1999, 1, 1)) ? LocalDate.of(1999, 1, 1) : from;
+             !start.isAfter(to); start = start.plusYears(10)) {
+            LocalDate end = start.plusYears(10).minusDays(1).isBefore(to) ? start.plusYears(10).minusDays(1) : to;
+            JsonNode rows = readRows(request(432, start, end));
+            var dates = new HashSet<LocalDate>();
+            for (JsonNode row : rows) {
+                LocalDate date;
+                try { date = LocalDate.parse(row.path("data").asText(), DATE); }
+                catch (DateTimeParseException ex) { throw new BcbException("Invalid Selic observation date", ex); }
+                if (date.isBefore(start) || date.isAfter(end) || !dates.add(date) || !row.has("valor")) {
+                    throw new BcbException("Duplicate or out-of-scope Selic observation");
+                }
+                JsonNode value = row.get("valor");
+                if (!value.isNull() && (!value.isTextual() || !value.textValue().matches("-?[0-9]+(?:\\.[0-9]+)?"))) {
+                    throw new BcbException("Invalid Selic rate");
+                }
+                points.add(new PolicyRateData.Point(date, value.isNull() ? null : new BigDecimal(value.textValue()), null));
+            }
+        }
+        points.sort(Comparator.comparing(PolicyRateData.Point::date));
+        return List.copyOf(points);
+    }
+
+    private String request(int series, LocalDate from, LocalDate to) {
         for (int attempt = 1; ; attempt++) {
             try {
-                return http.get().uri(builder -> builder.path("/dados/serie/bcdata.sgs.29037/dados")
+                return http.get().uri(builder -> builder.path("/dados/serie/bcdata.sgs." + series + "/dados")
                     .queryParam("formato", "json").queryParam("dataInicial", DATE.format(from))
                     .queryParam("dataFinal", DATE.format(to)).build()).retrieve().body(String.class);
             } catch (RestClientResponseException ex) {
@@ -94,11 +121,7 @@ class BcbClient {
     }
 
     List<ProviderData.Observation> decode(String body, int from, int to) {
-        if (body == null || body.length() > 1_000_000) throw new BcbException("Invalid BCB response size");
-        JsonNode rows;
-        try { rows = mapper.readTree(body); }
-        catch (JsonProcessingException ex) { throw new BcbException("Invalid BCB JSON response", ex); }
-        if (rows == null || !rows.isArray() || rows.size() > 5000) throw new BcbException("Invalid BCB observation collection");
+        JsonNode rows = readRows(body);
         var observed = new HashSet<LocalDate>();
         var result = new ArrayList<ProviderData.Observation>();
         for (JsonNode row : rows) {
@@ -125,5 +148,14 @@ class BcbClient {
             }
         }
         return List.copyOf(result);
+    }
+
+    private JsonNode readRows(String body) {
+        if (body == null || body.length() > 1_000_000) throw new BcbException("Invalid BCB response size");
+        JsonNode rows;
+        try { rows = mapper.readTree(body); }
+        catch (JsonProcessingException ex) { throw new BcbException("Invalid BCB JSON response", ex); }
+        if (rows == null || !rows.isArray() || rows.size() > 5000) throw new BcbException("Invalid BCB observation collection");
+        return rows;
     }
 }

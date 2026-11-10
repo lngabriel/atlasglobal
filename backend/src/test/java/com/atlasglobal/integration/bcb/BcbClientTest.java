@@ -29,6 +29,19 @@ class BcbClientTest {
     }
 
     @Test
+    void importsTheSelicTargetAsDatedDailyRatesWithoutYearEndSelection() {
+        server.expect(requestTo(containsString("bcdata.sgs.432/dados")))
+            .andRespond(withSuccess("[{\"data\":\"01/11/2026\",\"valor\":\"0\"},{\"data\":\"02/11/2026\",\"valor\":\"13.75\"},{\"data\":\"03/11/2026\",\"valor\":null}]", MediaType.APPLICATION_JSON));
+        var points = client.policyRate(java.time.LocalDate.parse("2026-11-01"), java.time.LocalDate.parse("2026-11-03"));
+        assertThat(points).hasSize(3);
+        assertThat(points.getFirst().value()).isZero();
+        assertThat(points.get(1).date()).isEqualTo(java.time.LocalDate.parse("2026-11-02"));
+        assertThat(points.get(1).value()).isEqualByComparingTo("13.75");
+        assertThat(points.getLast().value()).isNull();
+        server.verify();
+    }
+
+    @Test
     void selectsDecemberWithoutAveragingOrSubstitutingAnotherMonth() {
         var rows = client.decode("""
             [{"data":"01/11/2024","valor":"999.99"},
