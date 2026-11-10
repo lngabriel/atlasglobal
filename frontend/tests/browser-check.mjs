@@ -12,6 +12,8 @@ assert.ok(['http:', 'https:'].includes(base.protocol), 'ATLAS_BASE_URL must use 
 const screenshotDirectory = process.env.ATLAS_SCREENSHOT_DIR ? resolve(process.env.ATLAS_SCREENSHOT_DIR) : null
 if (screenshotDirectory) mkdirSync(screenshotDirectory, { recursive: true })
 const profile = mkdtempSync(join(tmpdir(), 'atlas-browser-check-'))
+const downloadDirectory = join(screenshotDirectory ?? profile, 'downloads')
+mkdirSync(downloadDirectory, { recursive: true })
 const browser = spawn(process.env.CHROME_BIN ?? 'google-chrome', [
   '--headless', '--no-sandbox', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
   '--disable-background-networking', '--disable-component-update', '--disable-sync',
@@ -39,6 +41,9 @@ const exceptions = []
 const cspErrors = []
 const unexpectedHttpErrors = []
 const requestedComparisons = []
+const requests = []
+const downloads = []
+const completedDownloads = new Set()
 let interceptionMode = null
 const pausedRequests = []
 
@@ -72,6 +77,9 @@ try {
       else void call('Fetch.continueRequest', { requestId }).catch(() => { /* Navigation may have cancelled this request. */ })
     }
     if (message.method === 'Runtime.exceptionThrown') exceptions.push(message.params.exceptionDetails)
+    if (message.method === 'Network.requestWillBeSent') requests.push(message.params.request.url)
+    if (message.method === 'Browser.downloadWillBegin') downloads.push(message.params)
+    if (message.method === 'Browser.downloadProgress' && message.params.state === 'completed') completedDownloads.add(message.params.guid)
     if (message.method === 'Network.requestWillBeSent' && /\/api\/v1\/indicators\/[^/]+\/history(?:\?|$)/.test(message.params.request.url)) requestedComparisons.push(message.params.request.url)
     if (message.method === 'Log.entryAdded' && /Content Security Policy|Refused to (?:load|apply)|violates.*policy/i.test(message.params.entry.text)) cspErrors.push(message.params.entry.text)
     if (message.method === 'Network.responseReceived') {
@@ -143,6 +151,38 @@ try {
   async function readyDashboard() {
     await waitFor(`!!document.querySelector('#history-title') && !!document.querySelector('.data-table tbody tr') && !!document.querySelector('.recharts-surface')`, 'country dashboard and rendered chart')
   }
+  function csvRecords(content) {
+    const rows = [], row = []
+    let cell = '', quoted = false
+    for (let index = 0; index < content.length; index++) {
+      const character = content[index]
+      if (character === '"') {
+        if (quoted && content[index + 1] === '"') { cell += '"'; index++ } else quoted = !quoted
+      } else if (!quoted && character === ',') { row.push(cell); cell = '' }
+      else if (!quoted && character === '\r' && content[index + 1] === '\n') {
+        row.push(cell); rows.push([...row]); row.length = 0; cell = ''; index++
+      } else cell += character
+    }
+    assert.equal(quoted, false, 'CSV must have balanced RFC4180 quoting')
+    if (cell || row.length) { row.push(cell); rows.push([...row]) }
+    const header = rows.shift()
+    assert.ok(header?.length)
+    return rows.map(values => { assert.equal(values.length, header.length); return Object.fromEntries(header.map((key, index) => [key, values[index]])) })
+  }
+  async function downloadCsv() {
+    const previous = downloads.length
+    await click(`Array.from(document.querySelectorAll('button')).find(button => button.textContent.trim() === 'Exportar CSV' && !button.disabled)`)
+    for (let attempt = 0; attempt < 160; attempt++) {
+      const download = downloads[previous]
+      if (download && completedDownloads.has(download.guid)) {
+        const bytes = readFileSync(join(downloadDirectory, download.suggestedFilename))
+        assert.deepEqual([...bytes.subarray(0, 3)], [239, 187, 191], 'Downloaded CSV must retain UTF-8 BOM')
+        return csvRecords(bytes.toString('utf8').replace(/^\uFEFF/, ''))
+      }
+      await pause(100)
+    }
+    throw new Error('CSV download did not finish')
+  }
   async function noOverflow(name) {
     assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), `${name}: page must not overflow horizontally`)
     pass(name)
@@ -153,6 +193,7 @@ try {
   await call('Network.enable')
   await call('Network.setCacheDisabled', { cacheDisabled: true })
   await call('Log.enable')
+  await call('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloadDirectory, eventsEnabled: true })
   await call('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false })
   const [brazil, summaries] = await Promise.all([api('/countries/BRA'), api('/countries/BRA/indicators?size=100')])
   assert.ok(summaries.content.some(item => item.latestAvailable), 'Import the documented World Bank dataset before running browser checks')
@@ -411,6 +452,117 @@ try {
   assert.equal(taiwanComparison.find(item => item.name.includes('Taiwan'))?.value, '—')
   pass('an unavailable Taiwan series remains missing in comparison rather than becoming zero')
 
+  await navigate('/paises/BRA?de=2020&ate=2024')
+  await readyDashboard()
+  const countryCsv = await downloadCsv()
+  assert.equal(countryCsv.length, 5)
+  assert.ok(countryCsv.every(row => row.country_code === 'BRA' && row.indicator_code === 'NY.GDP.MKTP.CD' && row.source_code === 'WORLD_BANK'))
+  pass('country CSV download preserves every observation, selected years, unit and source')
+  await navigate('/comparar?paises=BRA,USA&de=2020&ate=2024')
+  await waitFor(`!!document.querySelector('#comparison-reference-title') && !!document.querySelector('.recharts-surface')`)
+  const comparisonCsv = await downloadCsv()
+  assert.equal(comparisonCsv.length, comparison.observations.content.length)
+  for (const row of comparisonCsv) {
+    const original = comparison.observations.content.find(item => item.countryCode === row.country_code && item.period === Number(row.period))
+    assert.ok(original)
+    assert.equal(row.value === '' ? null : Number(row.value), original.value)
+  }
+  pass('comparison CSV matches the actual API across both countries without mixing reference years')
+
+  const ranking = await api(`/indicators/NY.GDP.MKTP.CD/ranking?seriesId=${encodeURIComponent(gdp.series.id)}&direction=desc&size=20`)
+  await navigate('/rankings')
+  await waitFor(`document.querySelectorAll('#ranking-table tbody tr').length === ${ranking.ranking.content.length}`, 'ranking table')
+  assert.ok(await evaluate(`document.querySelector('#ranking-coverage').textContent.includes('Cobertura parcial') && document.querySelector('#ranking-coverage').textContent.includes('${ranking.coverage.withData} de ${ranking.coverage.totalCountries}')`))
+  const ranked = await evaluate(`Array.from(document.querySelectorAll('#ranking-table tbody tr')).map(row => ({ rank: Number(row.querySelector('td').textContent), path: new URL(row.querySelector('a').href).pathname, value: row.querySelector('td[title]').title }))`)
+  for (const [index, entry] of ranking.ranking.content.entries()) {
+    assert.equal(ranked[index].rank, entry.rank)
+    assert.equal(ranked[index].path, `/paises/${entry.country.iso3Code}`)
+    assert.equal(ranked[index].value, `US$ ${new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(entry.value)}`)
+  }
+  pass('ranking matches one source and reference year and explicitly identifies incomplete coverage')
+  await screenshot('rankings-desktop')
+  if (ranking.ranking.totalPages > 1) {
+    await click(`document.querySelector('button[aria-label="Próxima página do ranking"]')`)
+    await waitFor(`new URLSearchParams(location.search).get('pagina') === '1' && !!document.querySelector('#ranking-table tbody tr')`)
+    const next = await api(`/indicators/NY.GDP.MKTP.CD/ranking?seriesId=${encodeURIComponent(gdp.series.id)}&direction=desc&size=20&page=1`)
+    await waitFor(`Number(document.querySelector('#ranking-table tbody tr td')?.textContent) === ${next.ranking.content[0].rank}`)
+    pass('ranking pagination preserves absolute positions across pages')
+  }
+  await select('#ranking-direction', 'asc')
+  await waitFor(`new URLSearchParams(location.search).get('ordem') === 'asc' && !new URLSearchParams(location.search).has('pagina') && !!document.querySelector('#ranking-table tbody tr')`)
+  const ascending = await api(`/indicators/NY.GDP.MKTP.CD/ranking?seriesId=${encodeURIComponent(gdp.series.id)}&direction=asc&size=20`)
+  await waitFor(`document.querySelector('#ranking-table tbody tr a')?.getAttribute('href').includes('/paises/${ascending.ranking.content[0].country.iso3Code}')`)
+  await select('#ranking-year', '2020')
+  await waitFor(`new URLSearchParams(location.search).get('ano') === '2020' && document.querySelector('#ranking-coverage')?.textContent.includes('em 2020')`)
+  pass('ranking direction and selected year update the query without carrying data from another year')
+  const beforeBlockedRanking = requests.length
+  await navigate('/rankings?indicador=IBGE.GINI.HOUSEHOLD.PER.CAPITA')
+  await waitFor(`document.body.innerText.includes('Esta definição não permite ranking entre países')`)
+  assert.equal(requests.slice(beforeBlockedRanking).some(request => request.includes('/IBGE.GINI.HOUSEHOLD.PER.CAPITA/ranking')), false)
+  pass('national policy restrictions prevent misleading country rankings and their API requests')
+
+  const policy = await api('/policy-rates?countries=BRA,USA')
+  assert.ok(policy.countries.every(item => item.latestAvailable), 'Import the official policy-rate data before browser checks')
+  const rateTo = policy.asOf
+  const rateFrom = `${Number(rateTo.slice(0, 4)) - 1}${rateTo.slice(4)}`
+  await navigate(`/juros?paises=BRA,USA&de=${rateFrom}&ate=${rateTo}`)
+  await waitFor(`document.querySelectorAll('#rate-latest [data-rate-country]').length === 2 && !!document.querySelector('.recharts-surface')`, 'dated policy rates and chart')
+  for (const item of policy.countries) {
+    const expected = `${new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 6 }).format(item.latestAvailable.value)}%`
+    assert.ok(await evaluate(`document.querySelector('#rate-latest [data-rate-country="${item.country.iso3Code}"] [title]')?.title === ${JSON.stringify(expected)}`))
+  }
+  await screenshot('policy-rates-desktop')
+  await click(`Array.from(document.querySelectorAll('summary')).find(element => element.textContent.includes('Ver taxas em tabela'))`)
+  await waitFor(`!!document.querySelector('#rate-history-table tbody tr')`)
+  const rateHistory = await api(`/policy-rates/history?countries=BRA,USA&from=${rateFrom}&to=${rateTo}`)
+  const rateCsv = await downloadCsv()
+  assert.equal(rateCsv.length, rateHistory.observations.length)
+  assert.ok(rateCsv.every(row => row.frequency === 'DAILY' && /^\d{4}-\d{2}-\d{2}$/.test(row.period)))
+  pass('policy rates retain actual daily dates and source-specific latest values in charts, tables and CSV')
+  await click(`Array.from(document.querySelectorAll('button')).find(button => button.textContent.trim() === '5 anos')`)
+  await waitFor(`new URLSearchParams(location.search).get('de')?.startsWith('${Number(rateTo.slice(0, 4)) - 5}') && !!document.querySelector('.recharts-surface')`)
+  pass('policy-rate period filters retrieve a dated multi-year history')
+  await navigate('/juros?paises=SGP')
+  await waitFor(`document.querySelector('#rate-latest')?.textContent.includes('câmbio')`)
+  assert.equal(await evaluate('document.querySelector("#rate-latest [title]").title'), '—')
+  pass('a jurisdiction without a comparable interest-rate target remains unavailable rather than showing a market proxy')
+  await navigate('/juros?paises=UKR')
+  await waitFor(`document.querySelector('#rate-latest')?.textContent.includes('National Bank of Ukraine')`)
+  const ukraineRate = await api('/policy-rates?countries=UKR')
+  assert.equal(ukraineRate.countries[0].series.source.code, 'NBU')
+  assert.ok(await evaluate(`document.querySelector('#rate-latest')?.textContent.includes(${JSON.stringify(new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 6 }).format(ukraineRate.countries[0].latestAvailable.value))})`))
+  pass('the official NBU fallback exposes persisted Ukrainian rates and their source')
+  await navigate('/juros?paises=ARG')
+  await waitFor(`document.querySelector('#rate-latest')?.textContent.includes('encerrado em 2025')`)
+  assert.ok(await evaluate(`document.querySelector('#rate-latest')?.textContent.includes('não representa uma taxa vigente')`))
+  pass('discontinued Argentine history is explicitly distinguished from a current policy rate')
+
+  const mapRequestStart = requests.length
+  await navigate('/mapa?pais=USA')
+  await waitFor(`!!document.querySelector('path[data-country="BRA"]') && document.querySelector('#map-country-title')?.textContent`, 'interactive world map')
+  await click(`document.querySelector('path[data-country="BRA"]')`)
+  await waitFor(`new URLSearchParams(location.search).get('pais') === 'BRA' && document.querySelector('#map-country-title')?.textContent === ${JSON.stringify(brazil.name)}`)
+  const population = summaries.content.find(item => item.indicator.code === 'SP.POP.TOTL')
+  const populationText = `${new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(population.latestAvailable.value)} pessoas`
+  await waitFor(`document.querySelector('[data-map-indicator="SP.POP.TOTL"] dd[title]')?.title === ${JSON.stringify(populationText)}`)
+  pass('world map polygon selection shows real country indicators with reference years and profile access')
+  await evaluate(`document.querySelector('path[data-country="CAN"]').focus()`)
+  await call('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 })
+  await call('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 })
+  await waitFor(`new URLSearchParams(location.search).get('pais') === 'CAN'`)
+  const shape = await evaluate(`document.querySelector('path[data-country="BRA"]').getAttribute('d')`)
+  await click(`document.querySelector('.leaflet-control-zoom-in')`)
+  await waitFor(`document.querySelector('path[data-country="BRA"]').getAttribute('d') !== ${JSON.stringify(shape)}`, 'map zoom')
+  await click(`Array.from(document.querySelectorAll('button')).find(button => button.textContent.trim() === 'Visão mundial')`)
+  pass('world map supports keyboard country selection, zoom controls and world reset')
+  await select('#map-country', 'HKG')
+  await waitFor(`new URLSearchParams(location.search).get('pais') === 'HKG' && document.body.innerText.includes('não possui uma área individual')`)
+  await select('#map-country', 'TWN')
+  await waitFor(`new URLSearchParams(location.search).get('pais') === 'TWN' && document.querySelector('[data-map-indicator="NY.GDP.MKTP.CD"] dd[title]')?.title === '—'`)
+  assert.equal(requests.slice(mapRequestStart).filter(request => /^https?:/.test(request) && new URL(request).origin !== base.origin).length, 0)
+  pass('small territories remain selectable without invented map values or external tile requests')
+  await screenshot('world-map-desktop')
+
   for (const width of [768, 390, 320]) {
     await call('Emulation.setDeviceMetricsOverride', { width, height: 844, deviceScaleFactor: 1, mobile: true })
     await navigate('/')
@@ -420,6 +572,18 @@ try {
     await navigate('/comparar?paises=BRA,USA&de=2020&ate=2024')
     await waitFor(`!!document.querySelector('#comparison-reference-title') && !!document.querySelector('.recharts-surface')`, 'responsive comparison')
     await noOverflow(`comparison ${width}px has no horizontal overflow`)
+    await navigate('/rankings')
+    await waitFor(`!!document.querySelector('#ranking-table tbody tr')`)
+    await noOverflow(`ranking ${width}px has no horizontal overflow`)
+    await screenshot(`rankings-${width}`)
+    await navigate('/mapa')
+    await waitFor(`!!document.querySelector('path[data-country="BRA"]')`)
+    await noOverflow(`world map ${width}px has no horizontal overflow`)
+    await screenshot(`world-map-${width}`)
+    await navigate('/juros?paises=BRA,USA')
+    await waitFor(`document.querySelectorAll('#rate-latest [data-rate-country]').length === 2 && !!document.querySelector('.recharts-surface')`)
+    await noOverflow(`policy rates ${width}px has no horizontal overflow`)
+    await screenshot(`policy-rates-${width}`)
     await navigate('/explorar')
     await readyDashboard()
     await noOverflow(`mobile ${width}px has no horizontal overflow`)
