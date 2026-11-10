@@ -1,0 +1,48 @@
+[
+  {
+    "id": "10816",
+    "variavel": "Rendimento médio mensal real domiciliar per capita, a preços médios do último ano",
+    "unidade": "Reais",
+    "resultados": [
+      {
+        "classificacoes": [
+          {
+            "id": "1019",
+            "nome": "Classes de percentual das pessoas em ordem crescente de rendimento domiciliar per capita",
+            "categoria": {
+              "49243": "Total"
+            }
+          }
+        ],
+        "series": [
+          {
+            "localidade": {
+              "id": "1",
+              "nivel": {
+                "id": "N1",
+                "nome": "Brasil"
+              },
+              "nome": "Brasil"
+            },
+            "serie": {
+              "2012": "1782",
+              "2013": "1840",
+              "2014": "1891",
+              "2015": "1830",
+              "2016": "1806",
+              "2017": "1811",
+              "2018": "1879",
+              "2019": "1904",
+              "2020": "1820",
+              "2021": "1692",
+              "2022": "1809",
+              "2023": "2018",
+              "2024": "2118",
+              "2025": "2264"
+            }
+          }
+        ]
+      }
+    ]
+  }
+]
