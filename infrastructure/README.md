@@ -1,11 +1,11 @@
-# Infraestrutura local
+# Local infrastructure
 
-Os serviços são definidos no `docker-compose.yml` da raiz. Os contextos de build são `backend/` e `frontend/`; cada um possui Dockerfile e `.dockerignore`.
+Services are defined in the root [docker-compose.yml](../docker-compose.yml). The build contexts are `backend/` and `frontend/`; each contains a Dockerfile and a `.dockerignore` file.
 
-- PostgreSQL 17 Alpine: volume persistente e health check.
-- Backend: build Maven/JDK 21 e runtime JRE 21 sem root.
-- Frontend: build Node 22 e runtime Nginx sem root, com fallback de rotas SPA.
-- A porta Actuator não é publicada nem encaminhada pelo proxy.
-- Todas as portas publicadas estão vinculadas a 127.0.0.1.
+- PostgreSQL 17 Alpine: persistent volume and health check.
+- Backend: Maven/JDK 21 build and a non-root JRE 21 runtime.
+- Frontend: Node.js 22 build and a non-root Nginx runtime with an SPA routing fallback.
+- The Actuator port is neither published nor forwarded by the proxy.
+- All published ports are bound to `127.0.0.1`.
 
-Consulte o README principal para variáveis e comandos. A configuração local não inclui hospedagem pública nem TLS.
+See the main [README](../README.md) for configuration variables and commands. The local configuration does not include public hosting or TLS.

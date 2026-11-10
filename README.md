@@ -45,7 +45,7 @@ Changing `.env` does not update credentials in an existing PostgreSQL volume. Up
 
 ## Explore the data
 
-The home selection contains exactly these countries and territories, displayed using their Brazilian Portuguese names: Argentina, Austrália, Brasil, Canadá, Chile, China, França, Hong Kong, Israel, Itália, Japão, Paraguai, Polônia, Portugal, Rússia, Singapura, Coreia do Sul, Espanha, Suíça, Taiwan, Ucrânia, Reino Unido, Estados Unidos, Venezuela, and Vietnã. Search this selection by name or ISO code and open a country profile directly.
+The home selection contains exactly these countries and territories: Argentina, Australia, Brazil, Canada, Chile, China, France, Hong Kong, Israel, Italy, Japan, Paraguay, Poland, Portugal, Russia, Singapore, South Korea, Spain, Switzerland, Taiwan, Ukraine, the United Kingdom, the United States, Venezuela, and Vietnam. The interface displays their Brazilian Portuguese names. Search this selection by name or ISO code and open a country profile directly.
 
 - **Home (`/`):** a compact country directory and four global highlights: GDP, population, life expectancy, and Internet use. Global figures are the World Bank's published `WLD` aggregates, stored separately from country observations. They are not totals or averages of the selected countries.
 - **Complete explorer (`/explorar`):** the full country/economy catalog, with name/ISO search, region and income filters, and pagination. Countries outside the home selection remain accessible.
@@ -55,9 +55,9 @@ The home selection contains exactly these countries and territories, displayed u
 - **World map (`/mapa`):** select a country on the map or through the complete country selector, view its persisted headline indicators, and open its profile. Simplified boundaries can omit small countries and territories; the selector provides access independently of map geometry.
 - **Policy rates (`/juros`):** latest available rates in percent per year, dated historical charts and tables, period filters, CSV export, and comparison of one to five countries. Each national instrument retains its own date and methodology. Unavailable coverage is explicit.
 
-Annual historical views default to 20 calendar years through the current UTC year. Use the 10-year, 20-year, or since-1960 presets, or enter a custom interval. Open **Ver dados em tabela** for accessible annual values. Charts and tables distinguish an explicit missing value from a year without an imported record; neither is replaced by zero or interpolated. Daily policy-rate histories use a separate one-year default and date filter.
+Annual historical views default to 20 calendar years through the current UTC year. Use the 10-year, 20-year, or since-1960 presets, or enter a custom interval. Expand the data table for accessible annual values. Charts and tables distinguish an explicit missing value from a year without an imported record; neither is replaced by zero or interpolated. Daily policy-rate histories use a separate one-year default and date filter.
 
-Expand **Definição e procedência** to inspect the original definition, unit, organization, dataset, and documentation. Comparison views display methodological limitations. National poverty lines and Brazil-only IBGE/BCB definitions are excluded from direct country comparisons. Brazilian national series appear in Brazil's profile without replacing international definitions. Sharing a provider and code does not remove survey, coverage, or national-definition differences; read the [coverage and comparability reference](docs/data-coverage.md).
+Expand the definition and provenance details to inspect the original definition, unit, organization, dataset, and documentation. Comparison views display methodological limitations. National poverty lines and Brazil-only IBGE/BCB definitions are excluded from direct country comparisons. Brazilian national series appear in Brazil's profile without replacing international definitions. Sharing a provider and code does not remove survey, coverage, or national-definition differences; read the [coverage and comparability reference](docs/data-coverage.md).
 
 Selection and filters are represented in the URL, allowing views to be bookmarked or shared:
 
@@ -76,7 +76,7 @@ The map serves a local [Natural Earth geometry layer](frontend/public/geodata/RE
 
 ### Download historical data
 
-Use **Exportar CSV** in a country history or an available comparison to download the selected countries, indicator, source-specific series, and interval. The file includes every matching observation across the interval, rather than just a visible chart segment or API page. Changing the selection cancels an in-progress download; failed requests display a retryable error without downloading partial data.
+Use the CSV export button in a country history or an available comparison to download the selected countries, indicator, source-specific series, and interval. The file includes every matching observation across the interval, rather than just a visible chart segment or API page. Changing the selection cancels an in-progress download; failed requests display a retryable error without downloading partial data.
 
 CSV files use UTF-8 with a byte-order mark, commas, CRLF record endings, and machine-readable column names. Decimal values retain their original precision and decimal point; negative values remain numeric. Explicit missing observations have an empty value and `MISSING` status, while years without an imported observation do not generate rows. Source, unit, dataset, series identity, and provenance dates accompany each value. The [API reference](docs/api.md#csv-export) describes the columns and spreadsheet text handling.
 
