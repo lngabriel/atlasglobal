@@ -39,6 +39,44 @@ class IndicatorObservationApiIT {
     private UUID secondCountry;
 
     @Test
+    void keepsNationalDefinitionsInBrazilProfilesAndBlocksCrossCountryComparisons() throws Exception {
+        store.countries(List.of(new com.atlasglobal.ingestion.ProviderData.Country("BR", "BRA", "Brasil", "Brazil",
+            null, null, null, null, null)));
+        for (String providerCode : List.of("IBGE", "BCB")) {
+            UUID nationalSource = store.ensureSource(new com.atlasglobal.ingestion.ProviderData.Source(providerCode,
+                providerCode, "https://example.test/", "Test national source", "https://example.test/docs"));
+            String code = "TEST.NATIONAL." + providerCode;
+            var definition = new com.atlasglobal.ingestion.ProviderData.Series(code, "Test national definition",
+                "ECONOMY", providerCode.equals("IBGE") ? "GINI_COEFFICIENT" : "PERCENT_HOUSEHOLD_RNDBF_12M", "TEST");
+            UUID nationalSeries = store.series(nationalSource, definition,
+                new com.atlasglobal.ingestion.ProviderData.Indicator("TEST", "Test national definition",
+                    "Brazil-only source methodology", providerCode));
+            UUID execution = store.start(nationalSource, "national-series-api-test");
+            store.observations(execution, nationalSeries, new com.atlasglobal.ingestion.ProviderData.Batch(List.of(
+                new com.atlasglobal.ingestion.ProviderData.Observation("BRA", code, 2025, BigDecimal.ZERO, "0")), null));
+            store.complete(execution);
+
+            mvc.perform(get("/api/v1/countries/BRA/indicators").param("source", providerCode))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].latestAvailable.period").value(2025))
+                .andExpect(jsonPath("$.content[0].latestAvailable.value").value(0))
+                .andExpect(jsonPath("$.content[0].latestAvailable.sourceUpdatedAt").isEmpty())
+                .andExpect(jsonPath("$.content[0].series.comparison.allowed").value(false));
+            mvc.perform(get("/api/v1/countries/TAA/indicators").param("source", providerCode))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0))
+                .andExpect(jsonPath("$.content").isEmpty());
+            mvc.perform(get("/api/v1/countries/BRA/indicators/" + code))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.observations.totalElements").value(1));
+            mvc.perform(get("/api/v1/countries/TAA/indicators/" + code))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.observations.totalElements").value(0));
+            mvc.perform(get("/api/v1/indicators/" + code + "/history").param("countries", "BRA,TAA")
+                .param("seriesId", nationalSeries.toString()))
+                .andExpect(status().isConflict());
+        }
+        verifyNoInteractions(provider);
+    }
+
+    @Test
     void blocksNationalPovertyComparisonButKeepsIndividualHistoryAndPublicPolicy() throws Exception {
         UUID nationalIndicator = UUID.randomUUID();
         UUID nationalSeries = UUID.randomUUID();

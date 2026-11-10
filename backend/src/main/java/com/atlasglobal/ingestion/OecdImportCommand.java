@@ -1,7 +1,6 @@
 package com.atlasglobal.ingestion;
 
 import com.atlasglobal.integration.oecd.OecdImportService;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -14,9 +13,7 @@ class OecdImportCommand implements ApplicationRunner {
     private final OecdImportService importer;
     private final ConfigurableApplicationContext context;
 
-    OecdImportCommand(OecdImportService importer, ConfigurableApplicationContext context,
-                      @Value("${atlas.import.run-once:false}") boolean worldBankCommand) {
-        if (worldBankCommand) throw new IllegalArgumentException("Run one provider import command at a time");
+    OecdImportCommand(OecdImportService importer, ConfigurableApplicationContext context) {
         this.importer = importer;
         this.context = context;
     }

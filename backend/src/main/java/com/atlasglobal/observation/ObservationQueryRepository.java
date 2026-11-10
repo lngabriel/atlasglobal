@@ -51,6 +51,7 @@ public class ObservationQueryRepository {
         String filter = """
             WHERE (:category IS NULL OR i.category = :category)
               AND (:source IS NULL OR LOWER(d.code) = :source)
+              AND (d.code NOT IN ('IBGE', 'BCB') OR :country = 'BRA')
             """;
         Long count = jdbc.queryForObject("SELECT count(*) " + from + filter, parameters, Long.class);
         String column = switch (page.getSort().iterator().next().getProperty()) {

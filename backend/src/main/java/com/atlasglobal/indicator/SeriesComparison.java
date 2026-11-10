@@ -3,6 +3,14 @@ package com.atlasglobal.indicator;
 /** Curated restrictions accompany the original provider methodology in every response. */
 public record SeriesComparison(boolean allowed, String note) {
     public static SeriesComparison forSeries(SeriesResponse series) {
+        if ("IBGE".equals(series.source().code())) {
+            return new SeriesComparison(false,
+                "Série nacional do Brasil, publicada pelo IBGE. A população pesquisada, a escala e a base de preços seguem a definição original; esta série não fornece observações harmonizadas de outros países.");
+        }
+        if ("BCB".equals(series.source().code())) {
+            return new SeriesComparison(false,
+                "Série nacional do Brasil: endividamento com o Sistema Financeiro Nacional em relação à RNDBF acumulada em 12 meses, observado em dezembro. Não equivale à razão dívida/renda disponível líquida da OCDE e não permite comparação direta entre países.");
+        }
         if ("WORLD_BANK".equals(series.source().code())) {
             if ("SI.POV.NAHC".equals(series.externalCode())) {
                 return new SeriesComparison(false,
