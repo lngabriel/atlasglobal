@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -19,6 +20,7 @@ public class OverviewQueryService {
 
     public OverviewQueryService(NamedParameterJdbcTemplate jdbc) { this.jdbc = jdbc; }
 
+    @Cacheable(cacheNames = "overview", key = "@queryCacheVersion.current()", sync = true)
     public OverviewResponse get() {
         var indicators = jdbc.query("""
             SELECT s.id, s.external_code, s.dataset_code, s.original_name, s.methodology,

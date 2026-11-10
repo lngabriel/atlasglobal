@@ -1,4 +1,9 @@
 spring:
+  cache:
+    type: caffeine
+    cache-names: countries,country,indicators,indicator,sources,source,overview
+    caffeine:
+      spec: maximumSize=256,expireAfterWrite=60s,recordStats
   application:
     name: atlas-global
   datasource:
@@ -46,6 +51,8 @@ management:
         readiness:
           include: readinessState,db
 atlas:
+  cache:
+    enabled: ${CACHE_ENABLED:true}
   additional-import:
     schedule-enabled: ${ADDITIONAL_SOURCES_SCHEDULE_ENABLED:false}
     cron: ${ADDITIONAL_SOURCES_IMPORT_CRON:0 0 5 * * SAT}
