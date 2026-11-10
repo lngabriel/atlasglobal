@@ -1,0 +1,68 @@
+{
+  "indicators": {
+    "BCA_NGDPD": {
+      "label": "Current account balance, percent of GDP",
+      "description": "The current account is the record of all transactions in the balance of payments covering the exports and imports of goods and services, payments of income, and current transfers between residents of a country and nonresidents.",
+      "source": "World Economic Outlook (October 2026)",
+      "unit": "Percent of GDP",
+      "dataset": "WEO",
+      "projection-year": 2026,
+      "last-modified": "2026-10-08 14:43:38"
+    }
+  },
+  "values": {
+    "BCA_NGDPD": {
+      "BRA": {
+        "2023": -1.2,
+        "2024": -3,
+        "2025": -2.9,
+        "2026": -2.4,
+        "2027": -2,
+        "2028": -2.1
+      },
+      "UVK": {
+        "2023": -7.2,
+        "2024": -8.7,
+        "2025": -8.3,
+        "2026": -9.3,
+        "2027": -8.9,
+        "2028": -8.4
+      },
+      "TWN": {
+        "2023": 14,
+        "2024": 14.3,
+        "2025": 20,
+        "2026": 22,
+        "2027": 23.1,
+        "2028": 22.5
+      },
+      "USA": {
+        "2023": -3.3,
+        "2024": -4.1,
+        "2025": -3.8,
+        "2026": -3.9,
+        "2027": -3.8,
+        "2028": -3.6
+      },
+      "VEN": {
+        "2023": 0.8,
+        "2024": 2.3,
+        "2025": 0.6,
+        "2026": -1,
+        "2027": -3.4
+      },
+      "WEOWORLD": {
+        "2023": 0.3,
+        "2024": 0.4,
+        "2025": 0.5,
+        "2026": 0.7,
+        "2027": 0.7,
+        "2028": 0.8
+      }
+    }
+  },
+  "api": {
+    "version": "2",
+    "output-method": "json"
+  }
+}

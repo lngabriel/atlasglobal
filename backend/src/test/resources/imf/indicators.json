@@ -1,0 +1,26 @@
+{
+  "indicators": {
+    "BCA_NGDPD": {
+      "label": "Current account balance, percent of GDP",
+      "description": "The current account is the record of all transactions in the balance of payments covering the exports and imports of goods and services, payments of income, and current transfers between residents of a country and nonresidents.",
+      "source": "World Economic Outlook (October 2026)",
+      "unit": "Percent of GDP",
+      "dataset": "WEO",
+      "projection-year": 2026,
+      "last-modified": "2026-10-08 14:43:38"
+    },
+    "GGXWDG_NGDP": {
+      "label": "General government gross debt",
+      "description": "Gross debt consists of all liabilities that require payment or payments of interest and/or principal by the debtor to the creditor at a date or dates in the future. This includes debt liabilities in the form of SDRs, currency and deposits, debt securities, loans, insurance, pensions and standardized guarantee schemes, and other accounts payable. Thus, all liabilities in the GFSM 2001 system are debt, except for equity and investment fund shares and financial derivatives and employee stock options. Debt can be valued at current market, nominal, or face values (GFSM 2001, paragraph 7.110).",
+      "source": "World Economic Outlook (October 2026)",
+      "unit": "Percent of GDP",
+      "dataset": "WEO",
+      "projection-year": 2026,
+      "last-modified": "2026-10-08 14:43:40"
+    }
+  },
+  "api": {
+    "version": "2",
+    "output-method": "json"
+  }
+}

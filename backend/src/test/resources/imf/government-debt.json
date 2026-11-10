@@ -1,0 +1,61 @@
+{
+  "indicators": {
+    "GGXWDG_NGDP": {
+      "label": "General government gross debt",
+      "description": "Gross debt consists of all liabilities that require payment or payments of interest and/or principal by the debtor to the creditor at a date or dates in the future. This includes debt liabilities in the form of SDRs, currency and deposits, debt securities, loans, insurance, pensions and standardized guarantee schemes, and other accounts payable. Thus, all liabilities in the GFSM 2001 system are debt, except for equity and investment fund shares and financial derivatives and employee stock options. Debt can be valued at current market, nominal, or face values (GFSM 2001, paragraph 7.110).",
+      "source": "World Economic Outlook (October 2026)",
+      "unit": "Percent of GDP",
+      "dataset": "WEO",
+      "projection-year": 2026,
+      "last-modified": "2026-10-08 14:43:40"
+    }
+  },
+  "values": {
+    "GGXWDG_NGDP": {
+      "BRA": {
+        "2023": 84,
+        "2024": 87,
+        "2025": 93.3,
+        "2026": 97,
+        "2027": 99.3,
+        "2028": 101.3
+      },
+      "UVK": {
+        "2023": 18.6,
+        "2024": 17.9,
+        "2025": 17.5,
+        "2026": 18.1,
+        "2027": 18.8,
+        "2028": 19.7
+      },
+      "TWN": {
+        "2023": 29,
+        "2024": 26.8,
+        "2025": 23.6,
+        "2026": 21.1,
+        "2027": 20,
+        "2028": 19.2
+      },
+      "USA": {
+        "2023": 120,
+        "2024": 122.3,
+        "2025": 124.4,
+        "2026": 126.8,
+        "2027": 128.7,
+        "2028": 132.3
+      },
+      "WEOWORLD": {
+        "2023": 90.9,
+        "2024": 91.9,
+        "2025": 94,
+        "2026": 94.6,
+        "2027": 95.8,
+        "2028": 97.4
+      }
+    }
+  },
+  "api": {
+    "version": "2",
+    "output-method": "json"
+  }
+}

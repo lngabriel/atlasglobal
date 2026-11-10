@@ -1,0 +1,23 @@
+{
+  "countries": {
+    "BRA": {
+      "label": "Brazil"
+    },
+    "TWN": {
+      "label": "Taiwan Province of China"
+    },
+    "USA": {
+      "label": "United States"
+    },
+    "VEN": {
+      "label": "Venezuela"
+    },
+    "UVK": {
+      "label": "Kosovo"
+    }
+  },
+  "api": {
+    "version": "2",
+    "output-method": "json"
+  }
+}
