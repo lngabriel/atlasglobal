@@ -73,6 +73,10 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - name: Validate the Cloudflare Pages artifact without publishing
+        env:
+          VITE_API_BASE_URL: https://atlas-global-api.onrender.com
+        run: npm run build:pages
       - run: npm audit --audit-level=high
   runtime:
     runs-on: ubuntu-24.04
@@ -102,6 +106,7 @@ jobs:
           docker compose logs --tail=100
           exit 1
       - run: npm --prefix frontend run test:smoke
+      - run: npm --prefix frontend run test:browser -- --cold-start-check
       - run: npm --prefix frontend run test:http -- --rate-limit-check
       - name: Verify the production runtime configuration
         env:
