@@ -9,3 +9,5 @@
 .vscode/
 .DS_Store
 .tools/
+backups/
+**/__pycache__/
