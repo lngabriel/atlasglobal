@@ -138,6 +138,8 @@ async function get<T>(path: string, parameters: Record<string, string | number |
   }
 }
 
+export { get as getJson }
+
 const segment = (value: string) => encodeURIComponent(value)
 
 export function getCountries(filters: CountryFilters = {}, signal?: AbortSignal): Promise<Page<Country>> {
