@@ -20,6 +20,7 @@ Atlas Global uses a modular Spring Boot monolith and a separate React frontend. 
 - `integration/bis` validates daily WS_CBPOL SDMX dimensions, national instrument metadata, exact values, and missing observations.
 - `integration/nbu` supplies the official Ukrainian key-policy-rate fallback with bounded historical requests.
 - `shared` contains explicit CORS configuration, bounded pagination, safe MVC errors, and OpenAPI configuration.
+- `shared/cache` provides bounded catalog/overview caches whose keys incorporate persisted import-audit state. Existing snapshot transactions bypass cached catalog entries.
 
 External response DTOs do not cross provider boundaries. Provider-independent source and series definitions feed parameterized PostgreSQL upserts. Flyway owns the schema; Hibernate validates mappings rather than modifying tables.
 
@@ -97,3 +98,5 @@ Database credentials are environment variables and never reach the browser. Impo
 Backend Docker builds cache Maven project dependencies with BuildKit and compile the application with unit tests. Frontend Docker builds run `npm test` before `npm run build`. Browser checks run separately against the application and imported dataset. Swagger UI is served through the frontend proxy with an inline-style exception scoped to its own route; the application keeps its stricter content policy.
 
 The Compose configuration is intended for local development. Deployment-specific TLS, network policy, and database roles belong to runtime configuration.
+
+The separate production Compose template uses verified image references, private database/backend services, read-only non-root application containers, and readiness checks. Nginx applies bounded per-client API/download limits, gzip, static bundle caching, and HTML revalidation. Trusted forwarded client addresses are configured only for the selected ingress. CI verifies Java/PostgreSQL, frontend builds/tests, dependency audits, image builds, and fresh-database browser/HTTP smoke checks. Container publication is manual and requires successful CI for the exact main commit; it does not automatically deploy. See [deployment](../deployment.md) and [security](../security.md).

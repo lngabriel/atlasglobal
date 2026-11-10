@@ -321,6 +321,11 @@ Errors use HTTP status codes with `application/problem+json` responses. Problem 
 | 404 | Requested resource does not exist. |
 | 405 | A write method was used on a read-only endpoint. |
 | 409 | An ambiguous indicator requires `seriesId`, or a multi-country request uses a definition with direct comparison disabled. |
+| 429 | The public Nginx entry point rejected an API/download burst; retry after the indicated delay. |
 | 500 | Unexpected server failure with a generic public message. |
 
 There are no public endpoints for imports, jobs, administration, accounts, or authentication. Import commands remain operational processes outside the query API. API requests do not trigger refreshes or fetch data from external providers. Actuator health endpoints use a separate restricted management port, as described in the root README.
+
+The frontend proxy limits reads to ten requests per second per connection/client address with a burst of 100; CSV paths additionally allow two per second with a burst of five. A limited request returns 429 and `Retry-After: 1`. Configure exact trusted ingress addresses before relying on forwarded client IPs; arbitrary forwarded headers are ignored by default. The backend's container/private address is an operational interface rather than a second public entry point.
+
+Small catalog and overview queries use a bounded sixty-second application cache. Import-audit changes invalidate keys across processes; active snapshot transactions bypass cached catalog entries to preserve their database view. Histories, rankings, and CSV bodies remain uncached. Compression and static browser-cache behavior are handled by Nginx; HTML is revalidated, while hashed bundles retain long-lived caching. See the [security reference](security.md).

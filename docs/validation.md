@@ -8,11 +8,13 @@ Verified on **2026-11-10** with Java 21.0.13, Maven 3.9.12, PostgreSQL 17.11, No
 mvn -f backend/pom.xml -Pintegration verify
 ```
 
-**161 backend tests passed** — 107 unit/contract tests and 54 PostgreSQL integration tests, with no failures, errors, or skipped tests. The full suite completed successfully; the eight UNDP contract tests were also rerun after normalizing the recorded fixture's line endings for repository review. Integration tests used a dedicated database; transactional store tests rolled back their writes.
+**166 backend tests passed** — 107 unit/contract tests and 59 PostgreSQL integration tests, with no failures, errors, or skipped tests. Integration tests used a dedicated database; transactional store tests rolled back their writes and cache tests removed their committed audit fixtures.
 
 Coverage includes:
 
 - Explicit CORS, safe errors, read-only API methods, OpenAPI, and isolated Actuator health endpoints.
+- Bounded catalog caching, immutable pagination keys, invalidation after successful or failed imports committed by another connection, and cache bypass inside existing snapshot transactions.
+- Registered MVC handlers and view beans exclude the SSE fragment and XSLT rendering features covered by the reviewed Spring advisories.
 - World Bank pagination, metadata, aggregate exclusion, exact decimals, null versus zero, HTTP retries, invalid provider responses, and bounded import configuration.
 - OECD annual dimension selection, RFC 4180 CSV, exact unit multipliers, missing values, zero, duplicate rejection, distinct price bases, retries, and transport dates that must not become statistical revision dates.
 - IBGE metadata, variables, national geography, classifications, annual periods, coefficient scale, price-base identity, exact decimals, SIDRA symbols, bounded gzip, duplicate keys, and HTTP failures.
@@ -59,6 +61,18 @@ npm run test:browser
 - Unknown countries/routes and countries without observations show their corresponding recoverable states. No JavaScript exceptions, content policy violations, or unexpected API errors occurred.
 
 Desktop and mobile screenshots were visually reviewed in light and dark themes, including the world map, rankings, and dated-rate views. New routes were checked at 768, 390, and 320 pixels without page-level horizontal overflow. Backend and frontend Docker images built successfully; their builds execute unit tests before packaging.
+
+The fresh-install smoke suite also passed **nine Chrome checks** against the separate production Compose runtime, without statistical imports. It covers the selected country directory/search, Taiwan's seeded profile, map selection, information page, responsive widths, and absence of browser/content-policy errors.
+
+## Delivery, security, and operations
+
+- HTTP checks passed for security headers, private management endpoints, gzip, GeoJSON MIME type, versioned-bundle caching, HTML revalidation, and Nginx health. A separate loopback burst test verified HTTP 429 with `Retry-After`, recovery after the limit interval, and rejection of spoofed forwarded-IP identities.
+- The npm audit reported **zero vulnerabilities**. The resolved Java audit checked **91 runtime coordinates**, with **zero unreviewed findings** and two exact, time-limited Spring Web MVC assessments. These are usage-specific findings, not patched library advisories; see [security](security.md) and the required review date of **2026-12-10**.
+- All **three dependency-audit tool tests** passed, including incomplete-provider-response rejection and assessment expiry. `actionlint` validated the CI and manual image-publication workflows.
+- The isolated production stack reached healthy status. Backend/frontend run as non-root users with read-only filesystems and dropped capabilities. Only the loopback frontend port is published; database, backend, and management ports remain private. Provider schedules are disabled by default in this configuration.
+- A fresh-database backup restored with its seeded identity and all five Flyway migrations. A separate backup of the populated local database restored into an isolated verification database with **43,918 annual observations, 111,586 daily policy-rate observations, and 264 world observations**. The source database was not modified by backup or restore.
+
+CI and manual GHCR publication are configured and locally validated. No GitHub workflow was executed remotely, images were not published, and no public deployment was performed. Hosting, domain, TLS, and registry access remain deployment inputs. See [deployment and recovery instructions](deployment.md).
 
 ## Live imports and database integrity
 

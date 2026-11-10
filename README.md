@@ -8,7 +8,7 @@ The home page presents a focused selection of 25 countries and territories, publ
 
 ## Stack
 
-- **Backend:** Java 21, Spring Boot 3, Spring Web, Spring Data JPA, Hibernate, Validation, Actuator, and Springdoc OpenAPI.
+- **Backend:** Java 21, Spring Boot 3, Spring Web, Spring Data JPA, Hibernate, Validation, Spring Cache with Caffeine, Actuator, and Springdoc OpenAPI.
 - **Data:** PostgreSQL 17 and Flyway, with World Bank, IMF, OECD, UNDP, Eurostat, IBGE, BCB, BIS, and NBU adapters and transactional imports.
 - **Frontend:** React, TypeScript, Vite, Tailwind CSS, shadcn/ui, React Router, TanStack Query, Recharts 3, and React Leaflet 5 with Leaflet 1.9.
 - **Runtime:** Docker Compose, with separate backend, frontend, and database services.
@@ -311,6 +311,7 @@ java -jar backend/target/atlas-global-0.1.0-SNAPSHOT.jar \
 | `DB_URL` | JDBC URL for local Java execution; Compose uses the internal `postgres` service. |
 | `BACKEND_PORT`, `FRONTEND_PORT` | Published ports, default 8080 and 3000. |
 | `CORS_ALLOWED_ORIGINS` | Exact allowed browser origins, comma-separated; no wildcards. |
+| `CACHE_ENABLED` | Enables bounded catalog/overview caching, default `true`; import audits invalidate entries across processes. |
 | `WORLD_BANK_COUNTRIES` | Shared comma-separated observation scope; defaults to the 24 home-selection codes supported by WDI, excluding Taiwan. National commands require `BRA` and use only Brazil. |
 | `WORLD_BANK_FROM_YEAR` | First annual import year, default 1960; policy rates use their separate date interval. |
 | `WORLD_BANK_TO_YEAR` | Last import year; 0 means the current UTC year. The BCB December series ends at the latest completed calendar year. |
@@ -324,6 +325,8 @@ java -jar backend/target/atlas-global-0.1.0-SNAPSHOT.jar \
 | `MANAGEMENT_PORT`, `MANAGEMENT_ADDRESS` | Operational health endpoint, default 8081 and 127.0.0.1. |
 
 The Compose setup binds published ports to localhost. It is a local development configuration; keep management endpoints private in any deployment.
+
+Nginx limits public API traffic to ten requests per second per client, with a burst of 100; CSV downloads also have a two-per-second limit and a burst of five. Excess requests return 429 with a retry hint. Client IP headers are trusted only after an ingress is explicitly configured. Versioned assets and local geometry are compressed/cached while HTML is revalidated. See the [security reference](docs/security.md) for cache consistency, dependency checks, and reviewed advisory applicability.
 
 ## Health checks
 
@@ -377,7 +380,22 @@ npm run test:browser
 
 The browser suite requires a local Google Chrome installation and checks the running application. `ATLAS_BASE_URL` overrides the default `http://127.0.0.1:3000`; `CHROME_BIN` selects the Chrome executable.
 
+A newly migrated database can be checked without statistical imports:
+
+```bash
+npm --prefix frontend run test:smoke
+npm --prefix frontend run test:http
+```
+
+The optional `npm --prefix frontend run test:http -- --rate-limit-check` performs a burst check against a loopback target only. Run it separately from the full browser suite so it does not throttle that suite. CI uses a fresh database, disabled provider schedules, and no statistical upstream calls. It runs backend/database tests, frontend checks, dependency audits, image builds, and runtime smoke checks. The full browser suite additionally verifies the imported real-data views.
+
 Use `npm ci` to reproduce the dependency versions in `package-lock.json`. Consult [validation results](docs/validation.md) for recorded checks and their environment.
+
+## Deployment and releases
+
+The [deployment reference](docs/deployment.md) describes manual GHCR image publication, the production Compose configuration, private environment variables, TLS ingress, trusted client IPs, health checks, backup/restore, and schema-compatible rollback. Image publication requires successful CI for the exact main commit and runs only on manual dispatch. Deployment uses verified image digests; it does not automatically publish a site or choose a hosting provider.
+
+Production files are under `infrastructure/production/`. The database/backend have no published ports, and the frontend is bound to loopback for a controlled HTTPS ingress. Prepare the platform, domain, secret configuration, and proxy topology before exposing it publicly. Dependency advisories and the time-limited Spring assessments are recorded in the [security reference](docs/security.md).
 
 ## Project structure
 
@@ -393,6 +411,9 @@ frontend/
   public/geodata/  Local world geometry and its provenance/license reference
   tests/         Unit tests and browser checks
 infrastructure/  Local runtime configuration guidance
+  production/    Private runtime template and trusted-ingress configuration
+scripts/         Database backup and resolved-dependency audit tools
+.github/         CI, manual image publication, dependency updates, and advisory assessments
 docs/            Technical architecture, data model, and provider documentation
 ```
 
