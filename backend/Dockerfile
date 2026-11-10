@@ -5,7 +5,7 @@ RUN --mount=type=cache,target=/root/.m2 mvn -B dependency:resolve
 COPY src ./src
 RUN --mount=type=cache,target=/root/.m2 mvn -B verify
 
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 RUN addgroup -S atlas && adduser -S atlas -G atlas
 COPY --from=build /workspace/target/atlas-global-0.1.0-SNAPSHOT.jar app.jar
