@@ -20,14 +20,14 @@ public class IndicatorQueryService {
         this.indicators = indicators; this.series = series;
     }
 
-    @Cacheable(cacheNames = "indicators", key = "{#q,#category,#source,#page.page,#page.size,#page.sort,#page.direction,@queryCacheVersion.current()}", sync = true)
+    @Cacheable(cacheNames = "indicators", key = "{#q,#category,#source,#page.page,#page.size,#page.sort,#page.direction,@queryCacheVersion.current()}", condition = "!T(org.springframework.transaction.support.TransactionSynchronizationManager).isActualTransactionActive()", sync = true)
     public PageResponse<IndicatorResponse> search(String q, IndicatorCategory category, String source, PageParameters page) {
         var pageable = page.pageable("name", Set.of("name", "code", "category"), "code");
         return PageResponse.from(indicators.search(QueryText.contains(q), category == null ? null : category.name(),
             QueryText.exact(source), pageable).map(IndicatorResponse::from));
     }
 
-    @Cacheable(cacheNames = "indicator", key = "{#code,@queryCacheVersion.current()}", sync = true)
+    @Cacheable(cacheNames = "indicator", key = "{#code,@queryCacheVersion.current()}", condition = "!T(org.springframework.transaction.support.TransactionSynchronizationManager).isActualTransactionActive()", sync = true)
     public IndicatorDetails get(String code) {
         var indicator = indicators.findByCode(code.toUpperCase(Locale.ROOT))
             .orElseThrow(() -> ApiException.notFound("Indicador não encontrado."));

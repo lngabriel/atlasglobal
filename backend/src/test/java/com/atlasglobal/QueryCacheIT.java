@@ -30,6 +30,7 @@ class QueryCacheIT {
     @Autowired ImportStore store;
     @Autowired JdbcTemplate jdbc;
     @Autowired DataSource database;
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactions;
     @MockitoSpyBean CountryRepository repository;
     private UUID source, execution;
 
@@ -73,6 +74,17 @@ class QueryCacheIT {
         jdbc.update("UPDATE country SET name='Cache partial revision' WHERE iso3_code='TQC'");
         store.fail(execution);
         assertThat(countries.getCountry("TQC").name()).isEqualTo("Cache partial revision");
+        verify(repository, times(2)).findByIso3Code("TQC");
+    }
+
+    @Test
+    void anExistingSnapshotTransactionBypassesCatalogEntriesFromAnEarlierRead() {
+        countries.getCountry("TQC");
+        jdbc.update("UPDATE country SET name='Cache transactional revision' WHERE iso3_code='TQC'");
+        var transaction = new org.springframework.transaction.support.TransactionTemplate(transactions);
+        transaction.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_REPEATABLE_READ);
+        transaction.executeWithoutResult(status ->
+            assertThat(countries.getCountry("TQC").name()).isEqualTo("Cache transactional revision"));
         verify(repository, times(2)).findByIso3Code("TQC");
     }
 

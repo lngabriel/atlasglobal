@@ -20,7 +20,7 @@ public class OverviewQueryService {
 
     public OverviewQueryService(NamedParameterJdbcTemplate jdbc) { this.jdbc = jdbc; }
 
-    @Cacheable(cacheNames = "overview", key = "@queryCacheVersion.current()", sync = true)
+    @Cacheable(cacheNames = "overview", key = "@queryCacheVersion.current()", condition = "!T(org.springframework.transaction.support.TransactionSynchronizationManager).isActualTransactionActive()", sync = true)
     public OverviewResponse get() {
         var indicators = jdbc.query("""
             SELECT s.id, s.external_code, s.dataset_code, s.original_name, s.methodology,

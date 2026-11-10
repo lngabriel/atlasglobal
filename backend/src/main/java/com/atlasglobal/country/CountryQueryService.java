@@ -20,7 +20,7 @@ public class CountryQueryService {
         this.countries = countries;
     }
 
-    @Cacheable(cacheNames = "countries", key = "{#query,#region,#incomeLevel,#page.page,#page.size,#page.sort,#page.direction,@queryCacheVersion.current()}", sync = true)
+    @Cacheable(cacheNames = "countries", key = "{#query,#region,#incomeLevel,#page.page,#page.size,#page.sort,#page.direction,@queryCacheVersion.current()}", condition = "!T(org.springframework.transaction.support.TransactionSynchronizationManager).isActualTransactionActive()", sync = true)
     public PageResponse<CountryResponse> search(String query, String region, String incomeLevel,
                                                 PageParameters page) {
         var result = countries.search(QueryText.contains(query), QueryText.exact(region),
@@ -28,7 +28,7 @@ public class CountryQueryService {
         return PageResponse.from(result.map(CountryResponse::from));
     }
 
-    @Cacheable(cacheNames = "country", key = "{#iso3Code,@queryCacheVersion.current()}", sync = true)
+    @Cacheable(cacheNames = "country", key = "{#iso3Code,@queryCacheVersion.current()}", condition = "!T(org.springframework.transaction.support.TransactionSynchronizationManager).isActualTransactionActive()", sync = true)
     public CountryResponse getCountry(String iso3Code) {
         return countries.findByIso3Code(iso3Code.toUpperCase(Locale.ROOT))
             .map(CountryResponse::from)
