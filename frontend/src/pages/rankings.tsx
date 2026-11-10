@@ -3,6 +3,7 @@ import { useIndicator, useIndicators } from '@/hooks/use-atlas-data'
 import { useRanking } from '@/hooks/use-ranking'
 import { useWorkspaceParams } from '@/hooks/use-workspace-params'
 import { ErrorState, LoadingState } from '@/components/query-state'
+import { ObservationNote } from '@/components/observation-note'
 import { Button } from '@/components/ui/button'
 import { categoryLabel, formatValue, unitLabel } from '@/lib/format'
 
@@ -133,7 +134,7 @@ export function RankingsPage() {
                   }).toString() }}>{entry.country.name}</Link>
                   <span className="ml-2 text-[10px] text-muted-foreground">{entry.country.iso3Code}</span>
                 </th>
-                <td className="text-right tabular-nums" title={formatValue(entry.value, selected.unit)}>{formatValue(entry.value, selected.unit, true)}</td>
+                <td className="text-right tabular-nums" title={formatValue(entry.value, selected.unit)}>{formatValue(entry.value, selected.unit, true)}<ObservationNote status={entry.providerStatus} /></td>
               </tr>)}</tbody>
             </table>
           </div>

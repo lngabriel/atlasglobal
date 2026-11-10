@@ -7,6 +7,7 @@ import { PeriodFilter, currentYear, queryYear } from '@/components/period-filter
 import { Button } from '@/components/ui/button'
 import { CsvExportButton } from '@/components/csv-export-button'
 import { CountrySelection } from '@/components/country-selection'
+import { ObservationNote } from '@/components/observation-note'
 import { buildComparisonPoints, latestCommonPeriod, parseComparisonCountries } from '@/lib/comparison'
 import { categoryLabel, formatDate, formatValue, unitLabel } from '@/lib/format'
 import type { Country, History } from '@/services/api'
@@ -34,6 +35,7 @@ function CommonYearSummary({ history, countries }: { history: History; countries
             <dt className="text-xs text-muted-foreground">{country.name}</dt>
             <dd className="mt-2 text-xl font-medium tracking-tight tabular-nums" title={formatValue(value, history.series.unit)}>{formatValue(value, history.series.unit, true)}</dd>
             <dd className="mt-1 text-[11px] leading-5 text-muted-foreground">{latest ? `Último valor individual: ${latest.period}` : 'Sem valor no período'}</dd>
+            <dd><ObservationNote status={common?.cells[country.iso3Code]?.observation?.providerStatus} /></dd>
           </div>
         })}
       </dl>

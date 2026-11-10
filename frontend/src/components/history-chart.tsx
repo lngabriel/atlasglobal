@@ -3,6 +3,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import type { Observation } from '@/services/api'
 import { buildHistoryPoints, type HistoryPoint } from '@/lib/history'
 import { formatAxisValue, formatValue, unitLabel } from '@/lib/format'
+import { ObservationNote } from '@/components/observation-note'
 
 function ChartTooltip({ active, payload, label, unit }: {
   active?: boolean
@@ -16,6 +17,7 @@ function ChartTooltip({ active, payload, label, unit }: {
   return <div className="border border-border bg-background px-3 py-2 text-xs leading-5 text-foreground">
     <p className="font-medium">{label}</p>
     <p className="tabular-nums">{formatValue(point.value, unit)}</p>
+    <ObservationNote status={point.observation?.providerStatus} />
     {point.value === null && <p className="text-muted-foreground">{point.status === 'UNREPORTED' ? 'Ano sem registro' : 'Valor não informado pela fonte'}</p>}
   </div>
 }
@@ -57,7 +59,7 @@ export function HistoryChart({ observations, from, to, unit }: {
             <tbody>{[...points].reverse().map(point => <tr key={point.period} className="border-b border-border last:border-0">
               <th scope="row" className="px-2 py-2 font-normal tabular-nums text-foreground">{point.period}</th>
               <td className="px-2 py-2 text-right tabular-nums text-foreground">{formatValue(point.value, unit)}</td>
-              <td className="px-2 py-2">{point.status === 'AVAILABLE' ? 'Disponível' : point.status === 'MISSING' ? 'Não informado pela fonte' : 'Ano sem registro'}</td>
+              <td className="px-2 py-2">{point.status === 'AVAILABLE' ? 'Disponível' : point.status === 'MISSING' ? 'Não informado pela fonte' : 'Ano sem registro'}<ObservationNote status={point.observation?.providerStatus} /></td>
             </tr>)}</tbody>
           </table>
         </div>

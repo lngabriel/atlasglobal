@@ -15,6 +15,9 @@ export function unitLabel(unit: string): string {
     USD_CURRENT_PER_PERSON: 'US$ correntes por pessoa',
     PERCENT_ANNUAL: '% ao ano',
     PERCENT_PER_ANNUM: '% ao ano',
+    PERCENT_GDP: '% do PIB',
+    PERCENT_GROSS_FINAL_ENERGY: '% do consumo final bruto de energia',
+    INDEX_0_1: 'índice (0–1)',
     PERSONS: 'pessoas',
     PERCENT_LABOR_FORCE: '% da força de trabalho',
     YEARS: 'anos',
@@ -38,6 +41,8 @@ export function unitLabel(unit: string): string {
 export function formatValue(value: number | null, unit: string, compact = false): string {
   if (value === null || !Number.isFinite(value)) return '—'
   if (unit === 'PERCENT_PER_ANNUM') return `${number(value, 6)}%`
+  if (unit === 'PERCENT_GROSS_FINAL_ENERGY') return `${number(value, 3)}%`
+  if (unit === 'INDEX_0_1') return number(value, 3, 3)
   if (unit === 'GINI_COEFFICIENT') return number(value, 3, 3)
   const amount = compact ? compactNumber(value) : number(value, unit === 'PERSONS' ? 0 : 2)
   if (unit === 'USD_CURRENT' || unit === 'USD_CURRENT_PER_PERSON') return `US$ ${amount}`
@@ -56,6 +61,8 @@ export function formatValue(value: number | null, unit: string, compact = false)
 export function formatAxisValue(value: number, unit: string): string {
   if (!Number.isFinite(value)) return '—'
   if (unit === 'PERCENT_PER_ANNUM') return `${number(value, 4)}%`
+  if (unit === 'PERCENT_GROSS_FINAL_ENERGY') return `${number(value, 3)}%`
+  if (unit === 'INDEX_0_1') return number(value, 3, 3)
   if (unit === 'GINI_COEFFICIENT') return number(value, 3, 3)
   return unit.startsWith('PERCENT_') ? `${number(value)}%` : compactNumber(value)
 }

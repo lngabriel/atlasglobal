@@ -5,6 +5,7 @@ export interface RankingEntry {
   rank: number
   country: { iso3Code: string; name: string }
   value: number
+  providerStatus?: string | null
 }
 
 export interface Ranking {

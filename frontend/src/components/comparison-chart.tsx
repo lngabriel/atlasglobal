@@ -3,6 +3,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import type { Observation } from '@/services/api'
 import { buildComparisonPoints, comparisonStatus, type ComparisonPoint } from '@/lib/comparison'
 import { formatAxisValue, formatValue, unitLabel } from '@/lib/format'
+import { ObservationNote } from '@/components/observation-note'
 
 interface ComparisonCountry {
   iso3Code: string
@@ -33,6 +34,7 @@ function ComparisonTooltip({ active, payload, countries, unit }: {
         return <p key={country.iso3Code} className="flex flex-wrap justify-between gap-x-5">
           <span>{country.name}</span>
           <span className="tabular-nums">{formatValue(cell.value, unit)}</span>
+          <ObservationNote status={cell.observation?.providerStatus} />
           {cell.value === null && <span className="w-full text-[11px] text-muted-foreground">{comparisonStatus(cell.status)}</span>}
         </p>
       })}
@@ -115,6 +117,7 @@ export function ComparisonChart({ observations, countries, from, to, unit }: {
                 const cell = point.cells[country.iso3Code]
                 return <td key={country.iso3Code} className="border-b border-border px-3 py-3 text-right align-top tabular-nums" title={comparisonStatus(cell.status)}>
                   <span className="whitespace-nowrap">{formatValue(cell.value, unit)}</span>
+                  <ObservationNote status={cell.observation?.providerStatus} />
                   {cell.value === null && <span className="mt-1 block text-[10px] leading-4 text-muted-foreground">{comparisonStatus(cell.status)}</span>}
                 </td>
               })}

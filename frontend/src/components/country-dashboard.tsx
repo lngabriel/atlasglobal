@@ -7,6 +7,7 @@ import { ErrorState, LoadingState } from '@/components/query-state'
 import { PeriodFilter, currentYear, queryYear } from '@/components/period-filter'
 import { CsvExportButton } from '@/components/csv-export-button'
 import { PolicyRateSummary } from '@/components/policy-rate-summary'
+import { ObservationNote } from '@/components/observation-note'
 import { incomeLabel, regionLabel } from '@/lib/country-labels'
 import { categoryLabel, formatDate, formatValue, unitLabel } from '@/lib/format'
 import { annualChange } from '@/lib/history'
@@ -197,6 +198,7 @@ export function CountryDashboard({ code, standalone = false }: { code: string; s
                   {formatValue(latest?.value ?? null, selected.series.unit, true)}
                 </span>
                 <span className="ml-3 text-xs text-muted-foreground">{latest ? `em ${latest.period}` : 'no período'}</span>
+                <ObservationNote status={latest?.providerStatus} />
               </p>
               {change && <p className="text-xs tabular-nums text-muted-foreground" title="Variação em relação ao ano anterior, na mesma série">
                 {change.label}
@@ -307,6 +309,7 @@ export function CountryDashboard({ code, standalone = false }: { code: string; s
                   title={formatValue(item.latestAvailable?.value ?? null, item.series.unit)}
                 >
                   {formatValue(item.latestAvailable?.value ?? null, item.series.unit, true)}
+                  <ObservationNote status={item.latestAvailable?.providerStatus} />
                 </td>
                 <td className="hidden text-right tabular-nums sm:table-cell">{item.latestAvailable?.period ?? '—'}</td>
                 <td className="hidden text-muted-foreground sm:table-cell">{item.series.source.name}</td>
