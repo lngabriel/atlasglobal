@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 public record WorldObservationResponse(int period,
-        @Schema(description = "Valor publicado para o agregado mundial; null para MISSING.", nullable = true)
+        @Schema(description = "Published world aggregate value; null for MISSING.", nullable = true)
         BigDecimal value,
         @Schema(allowableValues = {"AVAILABLE", "MISSING"}) String status,
         String providerStatus, LocalDate sourceUpdatedAt, Instant importedAt) {}

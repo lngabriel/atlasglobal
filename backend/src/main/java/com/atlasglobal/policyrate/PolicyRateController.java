@@ -15,17 +15,17 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/policy-rates")
-@Tag(name = "Taxas básicas de juros", description = "Taxas oficiais em % ao ano, com observações diárias e metodologias identificadas")
+@Tag(name = "Policy rates", description = "Official rates in percent per year, with daily observations and identified methodologies")
 public class PolicyRateController {
     private final PolicyRateQueryService service;
     public PolicyRateController(PolicyRateQueryService service) { this.service = service; }
     @GetMapping
-    @Operation(summary = "Consultar a última taxa oficial disponível", description = "De 1 a 5 países. Cada valor mantém a própria data, instrumento e fonte; não se presume que a data de coleta seja uma decisão de juros.")
+    @Operation(summary = "Get the latest available official rate", description = "One to five countries. Each value retains its own date, instrument, and source; collection dates are not assumed to be policy-decision dates.")
     public PolicyRateResponse.Result latest(@RequestParam @NotBlank @Size(max = 19) String countries) {
         return service.get(countries, null, null, false);
     }
     @GetMapping(value = "/export", produces = "text/csv")
-    @Operation(summary = "Exportar taxas diárias em CSV", description = "Mesmos países e intervalo do histórico, sem preencher datas ausentes ou misturar instrumentos.")
+    @Operation(summary = "Export daily rates as CSV", description = "Uses the same countries and interval as the history endpoint, without filling absent dates or mixing instruments.")
     public ResponseEntity<byte[]> export(@RequestParam @NotBlank @Size(max = 19) String countries,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
@@ -34,7 +34,7 @@ public class PolicyRateController {
             .header("X-Content-Type-Options", "nosniff").body(service.csv(countries, from, to));
     }
     @GetMapping("/history")
-    @Operation(summary = "Consultar ou comparar históricos datados de juros", description = "Até 5 países e 20 anos por consulta. Datas ISO 8601. Sem preenchimento de lacunas ou transformação em médias anuais; instrumentos nacionais podem diferir.")
+    @Operation(summary = "Get or compare dated policy-rate histories", description = "Up to five countries and twenty years per request. ISO 8601 dates. No gap filling or conversion to annual averages; national instruments may differ.")
     public PolicyRateResponse.Result history(@RequestParam @NotBlank @Size(max = 19) String countries,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {

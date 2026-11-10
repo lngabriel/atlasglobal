@@ -20,15 +20,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/exports")
-@Tag(name = "Exportação", description = "Downloads públicos de observações persistidas")
+@Tag(name = "Export", description = "Public downloads of persisted observations")
 public class CsvExportController {
     private final CsvExportService service;
     public CsvExportController(CsvExportService service) { this.service = service; }
 
     @GetMapping(value = "/indicators", produces = "text/csv")
-    @Operation(summary = "Exportar histórico completo em CSV",
-        description = "De 1 a 5 países, uma série e um intervalo. Exporta todas as páginas em um único snapshot, "
-            + "preservando valores, ausências e procedência. As mesmas restrições de comparação do histórico se aplicam.")
+    @Operation(summary = "Export complete history as CSV",
+        description = "One to five countries, one series, and one interval. Exports all pages from a single database snapshot, "
+            + "preserving values, missing observations, and provenance. The same comparison restrictions as the history endpoint apply.")
     public ResponseEntity<byte[]> export(
             @RequestParam @Pattern(regexp = "(?i)[A-Z0-9.]{1,100}") String indicator,
             @RequestParam @NotBlank @Size(max = 19) String countries,

@@ -12,13 +12,13 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/indicators")
-@Tag(name = "Indicadores", description = "Catálogo e definições de séries disponíveis")
+@Tag(name = "Indicators", description = "Catalog and definitions of available series")
 public class IndicatorController {
     private final IndicatorQueryService service;
     public IndicatorController(IndicatorQueryService service) { this.service = service; }
 
     @GetMapping
-    @Operation(summary = "Pesquisar indicadores", description = "Filtros combinados; source é o código público da fonte. Ordenação: name, code ou category.")
+    @Operation(summary = "Search indicators", description = "Filters are combined; source is the public source code. Sort fields: name, code, or category.")
     public PageResponse<IndicatorResponse> search(@RequestParam(required = false) @Size(max = 100) String q,
             @RequestParam(required = false) IndicatorCategory category,
             @RequestParam(required = false) @Pattern(regexp = "(?i)[A-Z0-9_]{1,40}") String source,
@@ -27,7 +27,7 @@ public class IndicatorController {
     }
 
     @GetMapping("/{indicatorCode}")
-    @Operation(summary = "Consultar indicador e séries", description = "Cada série identifica sua unidade, frequência, metodologia e fonte.")
+    @Operation(summary = "Get an indicator and its series", description = "Each series identifies its unit, frequency, methodology, and source.")
     public IndicatorDetails get(@PathVariable @Pattern(regexp = "(?i)[A-Z0-9.]{1,100}") String indicatorCode) {
         return service.get(indicatorCode);
     }

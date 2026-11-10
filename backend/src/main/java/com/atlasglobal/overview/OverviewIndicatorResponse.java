@@ -5,7 +5,7 @@ import com.atlasglobal.indicator.SeriesResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 public record OverviewIndicatorResponse(IndicatorResponse indicator, SeriesResponse series,
-        @Schema(description = "Último valor mundial numérico publicado; null quando indisponível.", nullable = true)
+        @Schema(description = "Latest published numeric world value; null when unavailable.", nullable = true)
         WorldObservationResponse latestAvailable,
-        @Schema(description = "Último registro mundial, inclusive MISSING; null se não houver registros.", nullable = true)
+        @Schema(description = "Latest world record, including MISSING; null if there are no records.", nullable = true)
         WorldObservationResponse latestReported) {}

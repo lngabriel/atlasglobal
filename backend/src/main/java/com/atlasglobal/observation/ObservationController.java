@@ -17,13 +17,13 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1")
-@Tag(name = "Observações", description = "Consultas de dados persistidos, sem chamadas a fontes externas")
+@Tag(name = "Observations", description = "Queries of persisted data without requests to external providers")
 public class ObservationController {
     private final ObservationQueryService service;
     public ObservationController(ObservationQueryService service) { this.service = service; }
 
     @GetMapping("/countries/{iso3Code}/indicators")
-    @Operation(summary = "Consultar indicadores de um país", description = "Uma entrada por série. latestAvailable informa o último valor numérico e latestReported o último registro, inclusive ausências. Campos nulos indicam falta de registros. Ordenação: name, code ou category.")
+    @Operation(summary = "Get country indicators", description = "One entry per series. latestAvailable identifies the latest numeric value and latestReported the latest record, including missing values. Null fields indicate absent records. Sort fields: name, code, or category.")
     public PageResponse<CountryIndicatorResponse> latest(
             @PathVariable @Pattern(regexp = "(?i)[A-Z0-9]{3}") String iso3Code,
             @RequestParam(required = false) IndicatorCategory category,
@@ -33,7 +33,7 @@ public class ObservationController {
     }
 
     @GetMapping("/countries/{iso3Code}/indicators/{indicatorCode}")
-    @Operation(summary = "Consultar histórico de um indicador no país", description = "Histórico anual paginado com unidade, metodologia e fonte. seriesId é obrigatório quando há várias séries. Ordenação apenas por period, com desempate por país.")
+    @Operation(summary = "Get a country indicator history", description = "Paginated annual history with unit, methodology, and source. seriesId is required when multiple series exist. Sort by period only, with country code as the tie breaker.")
     public HistoryResponse countryHistory(
             @PathVariable @Pattern(regexp = "(?i)[A-Z0-9]{3}") String iso3Code,
             @PathVariable @Pattern(regexp = "(?i)[A-Z0-9.]{1,100}") String indicatorCode,
@@ -45,7 +45,7 @@ public class ObservationController {
     }
 
     @GetMapping("/indicators/{indicatorCode}/history")
-    @Operation(summary = "Consultar histórico por países", description = "Informe de 1 a 5 códigos ISO3 distintos em countries. Retorna observações originais da mesma série; não alinha anos nem calcula comparações. O ano final padrão é o atual em UTC. Dados ausentes não são preenchidos.")
+    @Operation(summary = "Get history for selected countries", description = "Provide one to five distinct ISO3 codes in countries. Returns original observations from the same series without aligning years or calculating comparisons. The default end year is the current UTC year. Missing values are not filled.")
     public HistoryResponse history(
             @PathVariable @Pattern(regexp = "(?i)[A-Z0-9.]{1,100}") String indicatorCode,
             @RequestParam @NotBlank @Size(max = 19) String countries,

@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/sources")
-@Tag(name = "Fontes", description = "Identificação pública das fontes originais")
+@Tag(name = "Sources", description = "Public identification of original data sources")
 public class SourceController {
     private final SourceQueryService sources;
 
@@ -27,9 +27,9 @@ public class SourceController {
     }
 
     @GetMapping
-    @Operation(summary = "Pesquisar fontes", description = "Consulta os nomes e códigos das fontes, sem expor dados operacionais de importação.")
-    @ApiResponse(responseCode = "200", description = "Fontes encontradas")
-    @ApiResponse(responseCode = "400", description = "Parâmetro ou ordenação inválida")
+    @Operation(summary = "Search sources", description = "Searches source names and codes without exposing operational import data.")
+    @ApiResponse(responseCode = "200", description = "Sources found")
+    @ApiResponse(responseCode = "400", description = "Invalid parameter or ordering")
     public PageResponse<SourceResponse> search(
         @RequestParam(required = false) @Size(max = 100) String q,
         @ParameterObject @Valid @ModelAttribute PageParameters page
@@ -38,10 +38,10 @@ public class SourceController {
     }
 
     @GetMapping("/{code}")
-    @Operation(summary = "Consultar fonte", description = "Consulta uma fonte pelo código sem distinguir maiúsculas de minúsculas.")
-    @ApiResponse(responseCode = "200", description = "Fonte encontrada")
-    @ApiResponse(responseCode = "400", description = "Código da fonte inválido")
-    @ApiResponse(responseCode = "404", description = "Fonte não encontrada")
+    @Operation(summary = "Get a source", description = "Retrieves a source by its case-insensitive code.")
+    @ApiResponse(responseCode = "200", description = "Source found")
+    @ApiResponse(responseCode = "400", description = "Invalid source code")
+    @ApiResponse(responseCode = "404", description = "Source not found")
     public SourceResponse getSource(@PathVariable @Pattern(regexp = "[A-Za-z0-9_]{1,40}") String code) {
         return sources.getSource(code);
     }

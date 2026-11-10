@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-@Schema(description = "País ou economia do catálogo, com metadados preservados da fonte")
+@Schema(description = "Country or economy in the catalog, with metadata preserved from the source")
 public record CountryResponse(
     UUID id,
     String iso2Code,
@@ -13,7 +13,7 @@ public record CountryResponse(
     String originalName,
     String region,
     String incomeLevel,
-    @Schema(description = "Capital informada pela fonte; pode estar ausente") String capital,
+    @Schema(description = "Capital reported by the source; may be unavailable") String capital,
     BigDecimal latitude,
     BigDecimal longitude
 ) {

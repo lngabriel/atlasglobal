@@ -16,8 +16,8 @@ class OpenApiConfiguration {
     @Bean
     OpenAPI publicApi() {
         return new OpenAPI().info(new Info().title("Atlas Global API").version("v1")
-            .description("Consulta pública e gratuita de dados internacionais persistidos. Sem autenticação. "
-                + "Paginação começa em zero, com até 100 registros por página. Valores ausentes permanecem nulos."))
+            .description("Public, free queries of persisted international data. No authentication required. "
+                + "Pagination is zero-based, with up to 100 records per page. Missing values remain null."))
             .servers(List.of(new Server().url("/")));
     }
 
@@ -30,12 +30,12 @@ class OpenApiConfiguration {
                 .addProperty("status", new Schema<>().type("integer"))
                 .addProperty("detail", new Schema<>().type("string"))
                 .addProperty("instance", new Schema<>().type("string"));
-            addError(operation, "400", "Parâmetros inválidos", problem);
-            addError(operation, "500", "Falha interna com mensagem pública genérica", problem);
-            if (route.contains("{") || route.startsWith("/api/v1/exports/")) addError(operation, "404", "Recurso não encontrado", problem);
+            addError(operation, "400", "Invalid parameters", problem);
+            addError(operation, "500", "Internal failure with a generic public message", problem);
+            if (route.contains("{") || route.startsWith("/api/v1/exports/")) addError(operation, "404", "Resource not found", problem);
             if (route.endsWith("/history") || route.endsWith("/ranking") || route.startsWith("/api/v1/exports/") || (route.startsWith("/api/v1/countries/")
                     && route.endsWith("/indicators/{indicatorCode}"))) {
-                addError(operation, "409", "Selecione uma série explícita ou consulte a restrição metodológica e de cobertura", problem);
+                addError(operation, "409", "Select an explicit series or review the methodological and coverage restriction", problem);
             }
         }));
     }

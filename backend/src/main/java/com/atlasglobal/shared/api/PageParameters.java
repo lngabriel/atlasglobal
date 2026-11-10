@@ -12,13 +12,13 @@ import org.springframework.data.domain.Sort;
 
 public class PageParameters {
     @Min(0) @Max(10000)
-    @Schema(defaultValue = "0", description = "Índice da página, começando em zero")
+    @Schema(defaultValue = "0", description = "Zero-based page index")
     private int page = 0;
     @Min(1) @Max(100)
-    @Schema(defaultValue = "20", description = "Registros por página, de 1 a 100")
+    @Schema(defaultValue = "20", description = "Records per page, from 1 to 100")
     private int size = 20;
     @Size(max = 40)
-    @Schema(description = "Campo permitido de ordenação; o padrão depende do recurso")
+    @Schema(description = "Allowed sort field; the default depends on the resource")
     private String sort;
     @Pattern(regexp = "asc|desc")
     @Schema(defaultValue = "asc", allowableValues = {"asc", "desc"})

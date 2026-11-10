@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/countries")
-@Tag(name = "Países", description = "Catálogo público de países e economias")
+@Tag(name = "Countries", description = "Public catalog of countries and economies")
 public class CountryController {
     private final CountryQueryService countries;
 
@@ -27,10 +27,10 @@ public class CountryController {
     }
 
     @GetMapping
-    @Operation(summary = "Pesquisar países", description = "Busca por nome localizado, nome original, ISO ou região. "
-        + "Os filtros de região e renda são combinados. A pesquisa ignora maiúsculas e minúsculas e trata % e _ literalmente.")
-    @ApiResponse(responseCode = "200", description = "Países encontrados")
-    @ApiResponse(responseCode = "400", description = "Parâmetro ou ordenação inválida")
+    @Operation(summary = "Search countries", description = "Search by localized name, original name, ISO code, or region. "
+        + "Region and income filters are combined. Search is case-insensitive and treats % and _ literally.")
+    @ApiResponse(responseCode = "200", description = "Countries found")
+    @ApiResponse(responseCode = "400", description = "Invalid parameter or ordering")
     public PageResponse<CountryResponse> search(
         @RequestParam(required = false) @Size(max = 100) String q,
         @RequestParam(required = false) @Size(max = 200) String region,
@@ -41,10 +41,10 @@ public class CountryController {
     }
 
     @GetMapping("/{iso3Code}")
-    @Operation(summary = "Consultar país", description = "Aceita o código de três caracteres sem distinguir maiúsculas de minúsculas.")
-    @ApiResponse(responseCode = "200", description = "País encontrado")
-    @ApiResponse(responseCode = "400", description = "Código de país inválido")
-    @ApiResponse(responseCode = "404", description = "País não encontrado")
+    @Operation(summary = "Get a country", description = "Accepts a case-insensitive three-character country code.")
+    @ApiResponse(responseCode = "200", description = "Country found")
+    @ApiResponse(responseCode = "400", description = "Invalid country code")
+    @ApiResponse(responseCode = "404", description = "Country not found")
     public CountryResponse getCountry(@PathVariable @Pattern(regexp = "[A-Za-z0-9]{3}") String iso3Code) {
         return countries.getCountry(iso3Code);
     }
