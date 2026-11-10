@@ -5,7 +5,7 @@ import { rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
-// Run against a built application with the documented World Bank and OECD imports loaded.
+// Run against a built application with the documented provider imports loaded.
 // Uses Chrome's DevTools protocol and Node's built-in APIs; no browser SDK needed.
 const base = new URL(process.env.ATLAS_BASE_URL ?? 'http://127.0.0.1:3000')
 assert.ok(['http:', 'https:'].includes(base.protocol), 'ATLAS_BASE_URL must use HTTP or HTTPS')
@@ -360,10 +360,51 @@ try {
   const nationalPoverty = await api('/indicators/SI.POV.NAHC')
   assert.equal(nationalPoverty.series[0]?.comparison?.allowed, false)
   await navigate(`/comparar?paises=BRA,USA&indicador=SI.POV.NAHC&serie=${encodeURIComponent(nationalPoverty.series[0].id)}`)
-  await waitFor(`document.body.innerText.includes('A comparação entre países está indisponível devido às diferenças metodológicas')`, 'national poverty comparison restriction')
+  await waitFor(`document.body.innerText.includes('A comparação entre países está indisponível devido à definição ou à cobertura da série')`, 'national poverty comparison restriction')
   assert.equal(await evaluate('document.querySelectorAll(".recharts-surface").length'), 0)
   assert.equal(requestedComparisons.some(request => request.includes('/indicators/SI.POV.NAHC/history')), false, 'Methodologically incompatible national poverty must not trigger a comparison history request')
   pass('national poverty comparison is blocked with its source methodology and no history request')
+
+  const nationalSpecifications = [
+    { code: 'IBGE.GINI.HOUSEHOLD.PER.CAPITA', source: 'IBGE', unit: /^GINI_COEFFICIENT$/ },
+    { code: 'IBGE.HOUSEHOLD.INCOME.PER.CAPITA', source: 'IBGE', unit: /^BRL_REAL_\d{4}_MONTHLY_PER_PERSON$/ },
+    { code: 'BCB.HOUSEHOLD.DEBT.DECEMBER', source: 'BCB', unit: /^PERCENT_HOUSEHOLD_RNDBF_12M$/ },
+  ]
+  for (const specification of nationalSpecifications) {
+    const definition = await api(`/indicators/${specification.code}`)
+    const series = definition.series.filter(item => specification.unit.test(item.unit))
+      .sort((first, second) => second.unit.localeCompare(first.unit))[0]
+    assert.ok(series, `Import the documented ${specification.source} dataset before running browser checks`)
+    const entry = summaries.content.find(item => item.series.id === series.id)
+    assert.ok(entry?.latestAvailable, `Missing actual Brazil observation: ${specification.code}`)
+    assert.equal(series.comparison.allowed, false)
+    assert.equal(series.source.code, specification.source)
+    assert.equal(entry.latestAvailable.sourceUpdatedAt, null, 'Catalog metadata dates must not become statistical revision dates')
+    const digits = series.unit === 'GINI_COEFFICIENT' ? 3 : 2
+    const amount = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: digits, minimumFractionDigits: digits === 3 ? 3 : 0 }).format(entry.latestAvailable.value)
+    const expected = series.unit === 'GINI_COEFFICIENT' ? amount : series.unit.startsWith('BRL_REAL_') ? `R$ ${amount}` : `${amount}%`
+    await navigate(`/paises/BRA?indicador=${specification.code}&serie=${encodeURIComponent(series.id)}`)
+    await readyDashboard()
+    await waitFor(`document.querySelector('#history-title')?.textContent === ${JSON.stringify(definition.indicator.name)}`, 'selected national history')
+    assert.ok(await evaluate(`Array.from(document.querySelectorAll('.data-table tbody tr')).some(row => row.querySelector('button')?.textContent === ${JSON.stringify(definition.indicator.name)} && row.querySelector('td[title]')?.title === ${JSON.stringify(expected)})`), 'National value must match the stored official observation without changing its scale')
+    assert.ok(await evaluate(`document.body.innerText.includes(${JSON.stringify(series.comparison.note)})`), 'National coverage must remain visible in the profile')
+    if (series.unit.startsWith('BRL_REAL_')) {
+      const priceBase = /^BRL_REAL_(\d{4})_/.exec(series.unit)[1]
+      assert.ok(await evaluate(`document.body.innerText.includes(${JSON.stringify(`preços constantes de ${priceBase}`)})`))
+    }
+    if (specification.source === 'BCB') {
+      assert.ok(entry.latestAvailable.period < currentYear, 'December-only observations must not invent the current unfinished year')
+      assert.match(definition.indicator.name, /dezembro/i)
+    }
+    pass(`national ${specification.code} history preserves the real value, scale, year, source and coverage`)
+  }
+  const nationalGini = await api('/indicators/IBGE.GINI.HOUSEHOLD.PER.CAPITA')
+  await navigate(`/comparar?paises=BRA,USA&indicador=${nationalGini.indicator.code}&serie=${encodeURIComponent(nationalGini.series[0].id)}`)
+  await waitFor(`document.body.innerText.includes('A comparação entre países está indisponível devido à definição ou à cobertura da série')`, 'national source comparison restriction')
+  assert.equal(await evaluate('document.querySelectorAll(".recharts-surface").length'), 0)
+  assert.ok(await evaluate(`Array.from(document.querySelectorAll('a')).some(link => link.textContent.includes('Consultar Brasil') && new URL(link.href).pathname === '/paises/BRA')`))
+  assert.equal(requestedComparisons.some(request => request.includes('/indicators/IBGE.GINI.HOUSEHOLD.PER.CAPITA/history')), false)
+  pass('national source comparison explains Brazil-only coverage and offers its individual profile without requesting a comparison')
   await navigate(`/comparar?paises=BRA,TWN&indicador=NY.GDP.MKTP.CD&serie=${encodeURIComponent(gdp.series.id)}`)
   await waitFor(`document.querySelector('#comparison-reference-title') && document.body.innerText.includes('Sem valor no período')`, 'country without source observations in a comparison')
   const taiwanComparison = await evaluate(`Array.from(document.querySelector('#comparison-reference-title').closest('section').querySelectorAll('dl > div')).map(item => ({ name: item.querySelector('dt').textContent, value: item.querySelector('dd[title]').textContent }))`)
