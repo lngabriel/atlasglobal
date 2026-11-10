@@ -107,7 +107,7 @@ curl --fail 'http://localhost:3000/api/v1/countries/BRA'
 | --- | --- |
 | `q` | Matches indicator name or code; maximum 100 characters. |
 | `category` | One of `ECONOMY`, `DEMOGRAPHY`, `EDUCATION`, `HEALTH`, `ENVIRONMENT`, `TECHNOLOGY`, `INEQUALITY`, `SAFETY`, or `MIGRATION`. |
-| `source` | Source code, such as `WORLD_BANK` or `OECD`. |
+| `source` | Source code, such as `WORLD_BANK`, `OECD`, `IBGE`, or `BCB`. |
 
 Category values are uppercase and case-sensitive. A supported category may have no imported indicators. Unknown filter matches return an empty collection; an invalid category value returns HTTP 400.
 
@@ -120,6 +120,16 @@ Each catalog record has `id`, `code`, `name`, `description`, and `category`.
 
 Each series has `id`, `externalCode`, `datasetCode`, `originalName`, `methodology`, `sourceOrganization`, `unit`, `frequency`, `source`, and `comparison`. The nested source includes `id`, `code`, `name`, `baseUrl`, `description`, and `documentationUrl`. Unit values are machine-readable identifiers; the indicator and methodology supply their context. No unit conversion is performed by query endpoints. OECD wage units include the constant-price PPP base, for example `USD_PPP_2025_ANNUAL`; the dataset identity also includes that base. A different base is a separate series, not a conversion performed during the query.
 
+Brazilian national definitions also retain distinct identities:
+
+| Indicator code | Source | Unit and reference |
+| --- | --- | --- |
+| `IBGE.GINI.HOUSEHOLD.PER.CAPITA` | `IBGE` | `GINI_COEFFICIENT`, original 0–1 scale. |
+| `IBGE.HOUSEHOLD.INCOME.PER.CAPITA` | `IBGE` | `BRL_REAL_{baseYear}_MONTHLY_PER_PERSON`, monthly household income per person at the table's published constant-price base. |
+| `BCB.HOUSEHOLD.DEBT.DECEMBER` | `BCB` | `PERCENT_HOUSEHOLD_RNDBF_12M`, actual December household-debt ratio to restricted RNDBF accumulated over twelve months. |
+
+The IBGE real-income dataset identity includes its price base, such as `SIDRA_7533:2025`; rebased values form a separate series. No conversion joins the national Gini coefficient to the WDI 0–100 index, income in reais to OECD PPP wages, or BCB restricted RNDBF debt to OECD net-disposable-income debt. See the [Brazilian adapter reference](integrations/brazil.md).
+
 `comparison` contains:
 
 | Field | Meaning |
@@ -127,7 +137,7 @@ Each series has `id`, `externalCode`, `datasetCode`, `originalName`, `methodolog
 | `allowed` | Whether this series permits a multi-country historical request. |
 | `note` | Public methodological context, currently in Brazilian Portuguese, for display alongside the series. |
 
-National poverty lines (`SI.POV.NAHC` from `WORLD_BANK`) have `allowed: false`. Their country-specific thresholds preclude direct country comparisons, while individual country histories remain available. Other notes identify limitations in survey concepts, coverage, price bases, or statistical definitions. `allowed: true` permits exploration within one series; it does not assert perfect harmonization or a complete ranking. See [data coverage and comparability](data-coverage.md).
+National poverty lines (`SI.POV.NAHC` from `WORLD_BANK`) have `allowed: false`. Their country-specific thresholds preclude direct country comparisons, while individual country histories remain available. IBGE and BCB national definitions also have `allowed: false` because their coverage is Brazil, not a harmonized multi-country dataset. Other notes identify limitations in survey concepts, coverage, price bases, or statistical definitions. `allowed: true` permits exploration within one series; it does not assert perfect harmonization or a complete ranking. See [data coverage and comparability](data-coverage.md).
 
 ```bash
 curl --fail 'http://localhost:3000/api/v1/indicators?category=ECONOMY&source=WORLD_BANK&sort=code'
@@ -148,6 +158,8 @@ Each entry has:
 | `latestReported` | Most recent observation received, including a `MISSING` observation, or null if none exists. |
 
 The year of `latestAvailable` may precede `latestReported` when the provider's most recent record is missing. A country may exist in the catalog without observations for a series; both fields are then null. An unknown country returns HTTP 404.
+
+IBGE and BCB definitions appear in country summaries only for `BRA`. This coverage filter applies to both pagination counts and returned rows. The global indicator catalog still exposes their definitions. International series without observations retain their null latest-value fields; national scope filtering does not convert missing international data into an absent definition.
 
 ```bash
 curl --fail 'http://localhost:3000/api/v1/countries/BRA/indicators?category=ECONOMY&sort=code'
@@ -178,13 +190,17 @@ The response contains:
 | `from`, `to` | Effective requested interval. |
 | `observations` | Paginated observation records. |
 
-Each observation has `countryCode`, `period`, `value`, `status`, `providerStatus`, `sourceUpdatedAt`, and `importedAt`. `period` is an annual integer. `sourceUpdatedAt` is a validated statistical update date supplied by the provider, or null when unavailable; `importedAt` is the collection timestamp. OECD transport-header dates do not establish a statistical revision date and are not substituted for this field.
+Each observation has `countryCode`, `period`, `value`, `status`, `providerStatus`, `sourceUpdatedAt`, and `importedAt`. `period` is an annual integer. For `BCB.HOUSEHOLD.DEBT.DECEMBER`, it identifies the year of the actual December observation, not an average of the year's months. The importer excludes incomplete calendar years. IBGE income remains an annual survey statistic expressed as a monthly per-person amount.
+
+`sourceUpdatedAt` is a validated statistical update date supplied by the provider, or null when unavailable; `importedAt` is the collection timestamp. HTTP resource and catalog-maintenance dates do not establish a statistical revision date and are not substituted for this field. IBGE and BCB observations therefore keep unknown revision dates null while retaining their collection timestamps.
 
 `value` preserves the source's decimal value. A numeric zero is an `AVAILABLE` observation. A provider null is `MISSING` with `value: null`. The absence of an observation record is distinct from an explicit `MISSING` record. A known country/series with no matching records returns a successful response with an empty observation page.
 
+IBGE's published `-` symbol means absolute zero and becomes `AVAILABLE` with numeric zero. The published `..`, `...`, and `X` symbols become `MISSING`; the original symbol remains in `providerStatus`. An explicit single-country historical request for an IBGE/BCB definition outside Brazil returns an empty observation collection, without generating national values for another country.
+
 If an indicator has more than one series, omitting `seriesId` returns HTTP 409. Retrieve `/indicators/{indicatorCode}` and use the desired series UUID. An unknown UUID or a UUID belonging to another indicator returns HTTP 404; a malformed UUID returns HTTP 400. This prevents silent mixing of units, methodologies, or sources.
 
-A request with more than one country also checks `series.comparison.allowed`. A blocked definition, including national poverty lines, returns HTTP 409 with a public methodological explanation. This restriction applies even when an explicit `seriesId` is supplied. A one-country request for that definition remains valid.
+A request with more than one country also checks `series.comparison.allowed`. A blocked definition, including national poverty lines and IBGE/BCB national definitions, returns HTTP 409 with a public methodological or coverage explanation. This restriction applies even when an explicit `seriesId` is supplied. A one-country request for that definition remains valid.
 
 Multi-country history returns raw observations from the same selected series. It does not align periods, fill gaps, interpolate values, or calculate a country comparison. The web comparison view collects all pages, preserves per-country chart gaps, and derives its summary from the latest year in the requested interval with numeric values for every selected country. When no such year exists, it reports unavailable common-year values rather than mixing reference years.
 

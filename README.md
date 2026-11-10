@@ -2,14 +2,14 @@
 
 [GitHub](https://github.com/lngabriel/atlasglobal)
 
-Atlas Global is an open-source platform for exploring public international data. Its backend imports official World Bank and OECD annual statistics into PostgreSQL, preserving source definitions, units, price bases, update dates, and missing values. Access is public and free, without accounts or authentication.
+Atlas Global is an open-source platform for exploring public international data. Its backend imports World Bank and OECD statistics, complemented by Brazilian national series from IBGE and Banco Central do Brasil, into PostgreSQL. Each series preserves its definition, unit, price basis, reference period, provenance, and missing values. Access is public and free, without accounts or authentication.
 
 The home page presents a focused selection of 25 countries and territories, published world aggregates, and access to country comparison. Country profiles combine indicator summaries, historical charts, and source documentation in a responsive editorial layout with light and dark themes. The interface is in Brazilian Portuguese; the public REST API also supports independent clients.
 
 ## Stack
 
 - **Backend:** Java 21, Spring Boot 3, Spring Web, Spring Data JPA, Hibernate, Validation, Actuator, and Springdoc OpenAPI.
-- **Data:** PostgreSQL 17 and Flyway, with World Bank and OECD adapters and transactional batch imports.
+- **Data:** PostgreSQL 17 and Flyway, with World Bank, OECD, IBGE, and Banco Central adapters and transactional batch imports.
 - **Frontend:** React, TypeScript, Vite, Tailwind CSS, shadcn/ui, React Router, TanStack Query, and Recharts 3.
 - **Runtime:** Docker Compose, with separate backend, frontend, and database services.
 
@@ -33,7 +33,7 @@ docker compose ps
 
 Open **http://localhost:3000**. The database and its configured owner are created automatically when the PostgreSQL volume is initialized. Flyway applies and validates migrations when the backend starts.
 
-A new database has no imported observations. Run the [World Bank import command](#import-world-bank-data) below, followed by the [OECD import](#import-oecd-data), to populate the catalogs, world highlights, and charts. The interface reports unavailable data without substituting example values.
+A new database has no imported observations. Run the [World Bank import command](#import-world-bank-data) first to populate the country catalog, world highlights, and WDI histories. Run the [OECD import](#import-oecd-data) and [Brazilian national imports](#import-brazilian-national-data) for their additional series. The interface reports unavailable data without substituting example values.
 
 To stop the services while preserving database contents:
 
@@ -54,7 +54,7 @@ The home selection contains exactly these countries and territories, displayed u
 
 Historical views default to 20 calendar years through the current UTC year. Use the 10-year, 20-year, or since-1960 presets, or enter a custom interval. Open **Ver dados em tabela** for accessible annual values. Charts and tables distinguish an explicit missing value from a year without an imported record; neither is replaced by zero or interpolated.
 
-Expand **Definição e procedência** to inspect the original definition, unit, organization, dataset, and documentation. Comparison views display methodological limitations. National poverty lines are excluded from direct country comparisons because thresholds differ between countries. Sharing a provider and code does not remove survey, coverage, or national-definition differences; read the [coverage and comparability reference](docs/data-coverage.md).
+Expand **Definição e procedência** to inspect the original definition, unit, organization, dataset, and documentation. Comparison views display methodological limitations. National poverty lines and Brazil-only IBGE/BCB definitions are excluded from direct country comparisons. Brazilian national series appear in Brazil's profile without replacing international definitions. Sharing a provider and code does not remove survey, coverage, or national-definition differences; read the [coverage and comparability reference](docs/data-coverage.md).
 
 Selection and filters are represented in the URL, allowing views to be bookmarked or shared:
 
@@ -83,7 +83,7 @@ curl --fail 'http://localhost:3000/api/v1/indicators?category=ECONOMY&source=WOR
 curl --fail 'http://localhost:3000/api/v1/countries/BRA/indicators/NY.GDP.MKTP.CD?from=2020&to=2024'
 ```
 
-Country searches support names, ISO codes, region, and income filters. Indicator searches support name/code, category, and source filters. Collections are paginated, with at most 100 records per page and explicit allowed sort fields. Historical responses include units, source metadata, missing-value status, and a comparison policy; ambiguous indicators require an explicit `seriesId`. Multi-country requests for non-comparable national poverty lines return HTTP 409.
+Country searches support names, ISO codes, region, and income filters. Indicator searches support name/code, category, and source filters. Collections are paginated, with at most 100 records per page and explicit allowed sort fields. Historical responses include units, source metadata, missing-value status, and a comparison policy; ambiguous indicators require an explicit `seriesId`. Multi-country requests for blocked national definitions return HTTP 409.
 
 All queries are public and require no account, token, or authentication header. The API has no public write, import, or administrative operations.
 
@@ -110,9 +110,9 @@ docker compose run --rm --no-deps backend \
   --atlas.import.to-year=2024
 ```
 
-The process exits after importing and returns a nonzero exit code on failure. Scheduled jobs are disabled in either provider's one-shot process, even when scheduling is enabled in the environment. The World Bank and OECD one-shot flags are mutually exclusive. Repeating a command updates existing observations without creating duplicates. Previously stored periods outside the requested interval remain unchanged.
+The process exits after importing and returns a nonzero exit code on failure. Scheduled jobs are disabled in any provider's one-shot process, even when scheduling is enabled in the environment. The World Bank, OECD, IBGE, and BCB one-shot flags are mutually exclusive; run one provider per process. Repeating a command updates existing observations without creating duplicates. Previously stored periods outside the requested interval remain unchanged.
 
-Scheduled refreshes are disabled by default. Set `WORLD_BANK_SCHEDULE_ENABLED=true` to enable a weekly refresh at 03:00 UTC on Sunday. This schedule refreshes World Bank data only, covering the last six calendar years through the configured end year; run a full historical import periodically to capture older revisions. OECD imports are manual. `WORLD_BANK_IMPORT_CRON` accepts a Spring six-field cron expression.
+Scheduled refreshes are disabled by default. Set `WORLD_BANK_SCHEDULE_ENABLED=true` to enable a weekly refresh at 03:00 UTC on Sunday. This schedule refreshes World Bank data only, covering the last six calendar years through the configured end year; run a full historical import periodically to capture older revisions. OECD, IBGE, and BCB imports are manual. `WORLD_BANK_IMPORT_CRON` accepts a Spring six-field cron expression.
 
 Inspect import history and coverage:
 
@@ -133,15 +133,39 @@ docker compose run --rm --no-deps backend \
   --atlas.oecd-import.run-once=true
 ```
 
-It imports three annual OECD definitions: average wages, real statutory minimum wages, and household debt. It uses the same `atlas.import.countries`, `atlas.import.from-year`, and `atlas.import.to-year` configuration as the World Bank importer. No additional environment variable or API credential is required. Do not enable both provider one-shot flags in one process.
+It imports three annual OECD definitions: average wages, real statutory minimum wages, and household debt. It uses the same `atlas.import.countries`, `atlas.import.from-year`, and `atlas.import.to-year` configuration as the World Bank importer. No additional environment variable or API credential is required. Enable only one provider one-shot flag per process.
 
 The wage series use annual pay periods and constant US dollars at purchasing-power parity. The provider's price base is included in the stored unit and dataset identity; rebased observations form a separate series. Average wages refer to gross annual remuneration per full-time-equivalent dependent employee, while minimum wages refer to statutory annual amounts. Household debt is measured against net disposable income and includes non-profit institutions serving households. Country coverage differs between these measures.
 
 The command records its execution and exits after completion. Repeating it updates matching observations without duplicating country/series/year keys. It does not run automatically on ordinary application startup, and the optional World Bank scheduler does not refresh OECD data.
 
+## Import Brazilian national data
+
+Run the World Bank command first so that Brazil exists in the country catalog. Then run each national provider in a separate process:
+
+```bash
+docker compose run --rm --no-deps backend \
+  --spring.main.web-application-type=none \
+  --atlas.ibge-import.run-once=true \
+  --atlas.import.countries=BRA
+
+docker compose run --rm --no-deps backend \
+  --spring.main.web-application-type=none \
+  --atlas.bcb-import.run-once=true \
+  --atlas.import.countries=BRA
+```
+
+Both commands use the shared import-year configuration, require `BRA` in the configured country scope, and import observations for Brazil only. Other configured countries do not receive national observations. No API key or additional environment variable is required. These commands run manually, record their executions, and exit with a nonzero status on failure; they do not create public import endpoints or fetch data during page visits.
+
+The IBGE adapter imports two annual PNAD Contínua definitions: the Gini coefficient of household per-capita income, on its published 0–1 scale, and mean real monthly household income per person. The latter remains in reais at the provider's stated constant-price base; it is not a wage or a PPP measure. Rebasing creates a separate series instead of merging incompatible prices.
+
+The BCB adapter imports household indebtedness with the Brazilian financial system relative to restricted gross national disposable household income accumulated over twelve months. Its annual series keeps only the source's actual December observation for completed calendar years. It does not average months, substitute an earlier month, or label a current-year partial observation as a complete annual result. The denominator differs from the OECD net-disposable-income definition.
+
+National definitions remain distinct from international series and cannot be used for direct cross-country comparison. Read the [Brazilian adapter reference](docs/integrations/brazil.md) for dataset codes, methodology, and data-symbol handling.
+
 ## Data sources and coverage
 
-The import catalogs define **27 indicators: 24 from World Development Indicators (WDI source 2) and three from the OECD**. An indicator definition does not imply that every country or year has a value.
+The import catalogs define **30 indicators: 24 from World Development Indicators (WDI source 2), three from the OECD, two from IBGE, and one from BCB**. An indicator definition does not imply that every country or year has a value.
 
 | Subject | Integrated measures |
 | --- | --- |
@@ -151,12 +175,13 @@ The import catalogs define **27 indicators: 24 from World Development Indicators
 | Safety | Intentional homicides per 100,000 people. |
 | Migration | Net migration and international migrant stock, in persons and as a population percentage. |
 | Wages and household finances | OECD average annual wages, real annual minimum wages, and household debt relative to net disposable income. |
+| Brazilian national series | IBGE Gini coefficient and real monthly household income per person; BCB household indebtedness in December relative to restricted RNDBF accumulated over twelve months. |
 
-[World Bank Indicators API v2](https://datahelpdesk.worldbank.org/knowledgebase/articles/889392) supplies the WDI data, including original source-organization metadata. [OECD SDMX](https://www.oecd.org/en/data/insights/data-explainers/2024/09/api.html) supplies the earnings and household-debt series. Query endpoints read persisted data rather than calling these providers.
+[World Bank Indicators API v2](https://datahelpdesk.worldbank.org/knowledgebase/articles/889392) supplies the WDI data, including original source-organization metadata. [OECD SDMX](https://www.oecd.org/en/data/insights/data-explainers/2024/09/api.html) supplies the earnings and household-debt series. The [IBGE Aggregates API](https://servicodados.ibge.gov.br/api/docs/agregados?versao=3) and [BCB SGS](https://dadosabertos.bcb.gov.br/) supply the national definitions. Query endpoints read persisted data rather than calling these providers.
 
 The [coverage reference](docs/data-coverage.md) explains methodological limits and concepts without a validated integrated series. The application does not present GDP at PPP as a wage or household purchasing-power index, migrant stock as an immigration rate or foreign-national count, or intentional homicide as general crime or all violent deaths. It does not estimate poverty population counts from separate population denominators.
 
-Original names, methods, units, provider status flags, and dates are retained. Source update dates are recorded only when a validated statistical revision date is available; collection timestamps are recorded separately. OECD transport-header dates are not treated as statistical revision dates. Missing values remain explicitly unavailable. Consult the [World Bank data terms](https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets), OECD data terms linked from its API documentation, and the source organizations associated with each series when reusing data.
+Original names, methods, units, provider status flags, and dates are retained. Source update dates are recorded only when a validated statistical revision date is available; collection timestamps are recorded separately. HTTP resource dates and catalog-maintenance dates are not treated as statistical revision dates. A recently collected value can refer to an older year; price-base years are separate from observation years. Missing values remain explicitly unavailable. Consult the [World Bank data terms](https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets), OECD data terms linked from its API documentation, and the source organizations associated with each series when reusing data.
 
 ## Local development
 
@@ -188,7 +213,7 @@ npm run dev
 
 Open **http://localhost:5173**. Vite proxies `/api` to the backend on port 8080. The frontend does not receive database credentials.
 
-After building the backend, local imports can use the same exported database variables. Run the World Bank command first, then the OECD command in a separate process:
+After building the backend, local imports can use the same exported database variables. Run the World Bank command first, then each additional provider in its own process:
 
 ```bash
 mvn -f backend/pom.xml verify
@@ -198,6 +223,14 @@ java -jar backend/target/atlas-global-0.1.0-SNAPSHOT.jar \
 java -jar backend/target/atlas-global-0.1.0-SNAPSHOT.jar \
   --spring.main.web-application-type=none \
   --atlas.oecd-import.run-once=true
+java -jar backend/target/atlas-global-0.1.0-SNAPSHOT.jar \
+  --spring.main.web-application-type=none \
+  --atlas.ibge-import.run-once=true \
+  --atlas.import.countries=BRA
+java -jar backend/target/atlas-global-0.1.0-SNAPSHOT.jar \
+  --spring.main.web-application-type=none \
+  --atlas.bcb-import.run-once=true \
+  --atlas.import.countries=BRA
 ```
 
 ## Configuration
@@ -211,9 +244,9 @@ java -jar backend/target/atlas-global-0.1.0-SNAPSHOT.jar \
 | `DB_URL` | JDBC URL for local Java execution; Compose uses the internal `postgres` service. |
 | `BACKEND_PORT`, `FRONTEND_PORT` | Published ports, default 8080 and 3000. |
 | `CORS_ALLOWED_ORIGINS` | Exact allowed browser origins, comma-separated; no wildcards. |
-| `WORLD_BANK_COUNTRIES` | Comma-separated observation scope for both providers; defaults to the 24 home-selection codes supported by WDI, excluding Taiwan. |
-| `WORLD_BANK_FROM_YEAR` | First import year for both providers, default 1960. |
-| `WORLD_BANK_TO_YEAR` | Last import year for both providers; 0 means the current UTC year. |
+| `WORLD_BANK_COUNTRIES` | Shared comma-separated observation scope; defaults to the 24 home-selection codes supported by WDI, excluding Taiwan. National commands require `BRA` and use only Brazil. |
+| `WORLD_BANK_FROM_YEAR` | First import year for all providers, default 1960. |
+| `WORLD_BANK_TO_YEAR` | Last import year; 0 means the current UTC year. The BCB December series ends at the latest completed calendar year. |
 | `WORLD_BANK_SCHEDULE_ENABLED` | Enables scheduled imports, default `false`. |
 | `WORLD_BANK_IMPORT_CRON` | Refresh schedule, default `0 0 3 * * SUN`, evaluated in UTC. |
 | `MANAGEMENT_PORT`, `MANAGEMENT_ADDRESS` | Operational health endpoint, default 8081 and 127.0.0.1. |
@@ -290,4 +323,4 @@ infrastructure/  Local runtime configuration guidance
 docs/            Technical architecture, data model, and provider documentation
 ```
 
-Technical references: [API reference](docs/api.md), [architecture](docs/architecture/foundation.md), [data model](docs/data-model.md), [coverage and comparability](docs/data-coverage.md), and [World Bank integration](docs/integrations/world-bank.md).
+Technical references: [API reference](docs/api.md), [architecture](docs/architecture/foundation.md), [data model](docs/data-model.md), [coverage and comparability](docs/data-coverage.md), [World Bank integration](docs/integrations/world-bank.md), and [Brazilian integrations](docs/integrations/brazil.md).
