@@ -1,0 +1,15 @@
+.world-map-canvas { height: 470px; min-width: 0; background: var(--background); font: inherit; isolation: isolate; }
+.world-map-canvas .leaflet-control-attribution { background: var(--background); color: var(--muted-foreground); font-size: 10px; }
+.world-map-canvas .leaflet-control-attribution a { color: inherit; }
+.world-map-canvas .leaflet-bar { border: 1px solid var(--border); border-radius: 3px; box-shadow: none; }
+.world-map-canvas .leaflet-bar a { border-color: var(--border); background: var(--background); color: var(--foreground); }
+.world-map-canvas .leaflet-bar a:hover { background: var(--muted); }
+.world-map-canvas .leaflet-bar a.leaflet-disabled { background: var(--background); color: var(--muted-foreground); }
+.world-map-canvas .leaflet-tooltip { border: 1px solid var(--border); border-radius: 3px; box-shadow: none; background: var(--background); color: var(--foreground); font: inherit; font-size: 11px; }
+.world-map-canvas .leaflet-tooltip-top::before { border-top-color: var(--border); }
+.world-map-canvas .map-country { fill: var(--muted); stroke: var(--muted-foreground); stroke-width: .65; fill-opacity: 1; }
+.world-map-canvas .map-country:hover { fill: var(--border); }
+.world-map-canvas .map-country[aria-pressed="true"] { fill: var(--foreground); stroke: var(--foreground); stroke-width: 1; }
+.world-map-canvas .map-country:focus-visible { outline: none; stroke: var(--foreground); stroke-width: 2; }
+.world-map-canvas .map-country-unavailable { fill: var(--muted); stroke: var(--border); stroke-width: .65; fill-opacity: .55; cursor: default; }
+@media (max-width: 640px) { .world-map-canvas { height: 350px; } }
