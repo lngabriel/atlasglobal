@@ -15,6 +15,7 @@ export function Layout() {
             <NavLink to="/" end className={({ isActive }) => isActive ? 'font-semibold' : 'text-muted-foreground hover:text-foreground'}>Explorar</NavLink>
             <NavLink to="/comparar" className={({ isActive }) => isActive ? 'font-semibold' : 'text-muted-foreground hover:text-foreground'}>Comparar</NavLink>
             <NavLink to="/rankings" className={({ isActive }) => isActive ? 'font-semibold' : 'text-muted-foreground hover:text-foreground'}>Rankings</NavLink>
+            <NavLink to="/juros" className={({ isActive }) => isActive ? 'font-semibold' : 'text-muted-foreground hover:text-foreground'}>Juros</NavLink>
             <NavLink to="/mapa" className={({ isActive }) => isActive ? 'font-semibold' : 'text-muted-foreground hover:text-foreground'}>Mapa</NavLink>
             <NavLink to="/sobre" className={({ isActive }) => isActive ? 'font-semibold' : 'text-muted-foreground hover:text-foreground'}>O projeto</NavLink>
           </nav>

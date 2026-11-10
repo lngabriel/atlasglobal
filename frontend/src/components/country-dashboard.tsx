@@ -6,6 +6,7 @@ import { useCountry, useCountryIndicators, useHistory } from '@/hooks/use-atlas-
 import { ErrorState, LoadingState } from '@/components/query-state'
 import { PeriodFilter, currentYear, queryYear } from '@/components/period-filter'
 import { CsvExportButton } from '@/components/csv-export-button'
+import { PolicyRateSummary } from '@/components/policy-rate-summary'
 import { incomeLabel, regionLabel } from '@/lib/country-labels'
 import { categoryLabel, formatDate, formatValue, unitLabel } from '@/lib/format'
 import { annualChange } from '@/lib/history'
@@ -248,6 +249,7 @@ export function CountryDashboard({ code, standalone = false }: { code: string; s
           </details>
         </>}
       </section>
+      <PolicyRateSummary country={code} />
       <section aria-labelledby="indicators-title" className="mt-8">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>

@@ -11,6 +11,7 @@ import { RankingsPage } from '@/pages/rankings'
 import { LoadingState } from '@/components/query-state'
 
 const WorldMapPage = lazy(() => import('@/pages/world-map').then(module => ({ default: module.WorldMapPage })))
+const PolicyRatesPage = lazy(() => import('@/pages/policy-rates').then(module => ({ default: module.PolicyRatesPage })))
 
 export const router = createBrowserRouter([{
   element: <Layout />,
@@ -19,6 +20,7 @@ export const router = createBrowserRouter([{
     { path: '/explorar', element: <ExplorePage /> },
     { path: '/comparar', element: <ComparePage /> },
     { path: '/rankings', element: <RankingsPage /> },
+    { path: '/juros', element: <Suspense fallback={<div className="page-shell py-10"><LoadingState label="Carregando taxas de juros…" /></div>}><PolicyRatesPage /></Suspense> },
     { path: '/mapa', element: <Suspense fallback={<div className="page-shell py-10"><LoadingState label="Preparando o mapa…" /></div>}><WorldMapPage /></Suspense> },
     { path: '/paises/:iso3Code', element: <CountryPage /> },
     { path: '/sobre', element: <AboutPage /> },

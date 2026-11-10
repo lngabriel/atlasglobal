@@ -14,6 +14,7 @@ export function unitLabel(unit: string): string {
     USD_CURRENT: 'US$ correntes',
     USD_CURRENT_PER_PERSON: 'US$ correntes por pessoa',
     PERCENT_ANNUAL: '% ao ano',
+    PERCENT_PER_ANNUM: '% ao ano',
     PERSONS: 'pessoas',
     PERCENT_LABOR_FORCE: '% da força de trabalho',
     YEARS: 'anos',
@@ -36,6 +37,7 @@ export function unitLabel(unit: string): string {
 /** Missing and invalid numbers remain unavailable; they are never coerced to zero. */
 export function formatValue(value: number | null, unit: string, compact = false): string {
   if (value === null || !Number.isFinite(value)) return '—'
+  if (unit === 'PERCENT_PER_ANNUM') return `${number(value, 6)}%`
   if (unit === 'GINI_COEFFICIENT') return number(value, 3, 3)
   const amount = compact ? compactNumber(value) : number(value, unit === 'PERSONS' ? 0 : 2)
   if (unit === 'USD_CURRENT' || unit === 'USD_CURRENT_PER_PERSON') return `US$ ${amount}`
@@ -53,6 +55,7 @@ export function formatValue(value: number | null, unit: string, compact = false)
 /** Axes use the chart's separate unit label to keep repeated ticks concise. */
 export function formatAxisValue(value: number, unit: string): string {
   if (!Number.isFinite(value)) return '—'
+  if (unit === 'PERCENT_PER_ANNUM') return `${number(value, 4)}%`
   if (unit === 'GINI_COEFFICIENT') return number(value, 3, 3)
   return unit.startsWith('PERCENT_') ? `${number(value)}%` : compactNumber(value)
 }

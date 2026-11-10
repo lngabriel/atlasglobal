@@ -1,4 +1,7 @@
 import { ApiError } from './api.ts'
+import { rateCountries, validDate } from './policy-rates.ts'
+
+export interface RateCsvSelection { countries: string[]; from: string; to: string }
 
 export interface CsvSelection {
   countries: string[]
@@ -22,10 +25,24 @@ export function csvParameters(selection: CsvSelection): URLSearchParams {
 
 export async function getCsv(selection: CsvSelection, signal?: AbortSignal): Promise<Blob> {
   const parameters = csvParameters(selection)
+  return getDownload('/exports/indicators', parameters, signal)
+}
+
+export function rateCsvParameters(selection: RateCsvSelection): URLSearchParams {
+  const countries = rateCountries(selection.countries.join(','))
+  if (!validDate(selection.from) || !validDate(selection.to) || selection.from > selection.to) throw new ApiError(400)
+  return new URLSearchParams({ countries: countries.join(','), from: selection.from, to: selection.to })
+}
+
+export function getRateCsv(selection: RateCsvSelection, signal?: AbortSignal): Promise<Blob> {
+  return getDownload('/policy-rates/export', rateCsvParameters(selection), signal)
+}
+
+async function getDownload(path: string, parameters: URLSearchParams, signal?: AbortSignal): Promise<Blob> {
   const timeout = AbortSignal.timeout(15_000)
   const requestSignal = signal ? AbortSignal.any([signal, timeout]) : timeout
   try {
-    const response = await fetch(`/api/v1/exports/indicators?${parameters}`, {
+    const response = await fetch(`/api/v1${path}?${parameters}`, {
       headers: { Accept: 'text/csv, application/problem+json' }, credentials: 'omit', signal: requestSignal,
     })
     if (!response.ok) throw new ApiError(response.status)

@@ -6,57 +6,13 @@ import { ErrorState, LoadingState } from '@/components/query-state'
 import { PeriodFilter, currentYear, queryYear } from '@/components/period-filter'
 import { Button } from '@/components/ui/button'
 import { CsvExportButton } from '@/components/csv-export-button'
+import { CountrySelection } from '@/components/country-selection'
 import { buildComparisonPoints, latestCommonPeriod, parseComparisonCountries } from '@/lib/comparison'
 import { categoryLabel, formatDate, formatValue, unitLabel } from '@/lib/format'
 import type { Country, History } from '@/services/api'
 
 const ComparisonChart = lazy(() => import('@/components/comparison-chart').then(module => ({ default: module.ComparisonChart })))
 
-function CountrySelection({ countries, codes, disabled, onChange }: {
-  countries: Country[]
-  codes: string[]
-  disabled: boolean
-  onChange: (codes: string[]) => void
-}) {
-  return (
-    <fieldset className="min-w-0" disabled={disabled}>
-      <legend className="text-xs font-semibold">Países e territórios</legend>
-      <ul className="mt-3 flex flex-wrap gap-2" aria-label="Países selecionados para comparação">
-        {codes.map(code => {
-          const country = countries.find(item => item.iso3Code === code)
-          return <li key={code} className="flex items-center gap-3 rounded-sm border border-border px-3 py-2 text-xs">
-            <span>{country?.name ?? `${code} (não encontrado)`}</span>
-            <button
-              type="button"
-              className="text-link text-[11px] text-muted-foreground disabled:opacity-40"
-              aria-label={`Remover ${country?.name ?? code} da comparação`}
-              disabled={codes.length <= 2}
-              onClick={() => onChange(codes.filter(item => item !== code))}
-            >
-              Remover
-            </button>
-          </li>
-        })}
-      </ul>
-      <label htmlFor="comparison-country" className="control-label mt-4 block">
-        Adicionar país
-        <select
-          id="comparison-country"
-          className="field mt-1.5 block w-full sm:max-w-80"
-          value=""
-          disabled={disabled || codes.length >= 5}
-          onChange={event => { if (event.target.value) onChange([...codes, event.target.value]) }}
-        >
-          <option value="">{codes.length >= 5 ? 'Limite de cinco países atingido' : 'Selecione um país ou território'}</option>
-          {countries.filter(country => !codes.includes(country.iso3Code)).map(country => (
-            <option key={country.iso3Code} value={country.iso3Code}>{country.name}</option>
-          ))}
-        </select>
-      </label>
-      <p className="mt-2 text-[11px] leading-5 text-muted-foreground">Compare de 2 a 5 países na mesma série e no mesmo intervalo.</p>
-    </fieldset>
-  )
-}
 
 function CommonYearSummary({ history, countries }: { history: History; countries: Country[] }) {
   const points = buildComparisonPoints(history.observations.content, countries.map(country => country.iso3Code), history.from, history.to)
@@ -140,6 +96,7 @@ export function ComparePage() {
       <header className="mb-7">
         <h1 className="editorial-title text-3xl sm:text-4xl">Países em perspectiva.</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Consulte o mesmo indicador entre países, com unidade, ano e fonte identificados.</p>
+        <Link className="text-link mt-3 inline-block text-xs" to={`/juros?paises=${selection.countries.join(',')}`}>Comparar taxas básicas de juros por data</Link>
       </header>
       <div className="grid min-w-0 gap-7 border-y border-border py-6 lg:grid-cols-2 lg:gap-12">
         <div className="min-w-0">
