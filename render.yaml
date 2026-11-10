@@ -1,0 +1,34 @@
+# Preparation only: importing this Blueprint in Render creates a remote service.
+# Keep manual deployment control and never put credentials in this file.
+services:
+  - type: web
+    name: atlas-global-api
+    runtime: docker
+    plan: free
+    branch: main
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    autoDeployTrigger: "off"
+    healthCheckPath: /healthz
+    maxShutdownDelaySeconds: 30
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: render
+      - key: JAVA_TOOL_OPTIONS
+        value: -Xms64m -Xmx256m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=48m -Xss256k -XX:ActiveProcessorCount=2 -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError
+      - key: DB_HOST
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: WORLD_BANK_SCHEDULE_ENABLED
+        value: "false"
+      - key: ADDITIONAL_SOURCES_SCHEDULE_ENABLED
+        value: "false"
+      - key: POLICY_RATE_SCHEDULE_ENABLED
+        value: "false"

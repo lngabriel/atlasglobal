@@ -11,3 +11,4 @@
 .tools/
 backups/
 **/__pycache__/
+infrastructure/free-tier/backend.env

@@ -1,0 +1,14 @@
+# Copy outside the repository, for example ~/.config/atlas-global/pg_service.conf.
+# Use PGSERVICEFILE to select the real file, and chmod 600 both private files.
+[atlas-global]
+host=ep-replace-with-direct-endpoint.region.aws.neon.tech
+port=5432
+dbname=atlas_global
+user=replace-with-neon-role
+sslmode=verify-full
+# Replace with your operating system's trusted CA bundle (for example,
+# /etc/ssl/certs/ca-certificates.crt on Debian/Ubuntu).
+sslrootcert=/absolute/path/to/trusted-ca-bundle.pem
+connect_timeout=20
+# Replace with an ABSOLUTE path; libpq does not expand ~ inside this file.
+passfile=/absolute/private/path/atlas-global.pgpass

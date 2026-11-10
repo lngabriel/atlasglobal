@@ -43,6 +43,18 @@ class FoundationIT {
     }
 
     @Test
+    void exposesOnlyMinimalUncachedAvailabilityAndProtectsDirectResponses() {
+        var response = http.getForEntity(url(applicationPort, "/healthz"), java.util.Map.class);
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody()).containsOnlyKeys("status");
+        assertThat(response.getBody().get("status")).isEqualTo("UP");
+        assertThat(response.getHeaders().getCacheControl()).contains("no-store");
+        assertThat(response.getHeaders().getFirst("X-Content-Type-Options")).isEqualTo("nosniff");
+        assertThat(response.getHeaders().getFirst("X-Frame-Options")).isEqualTo("DENY");
+        assertThat(response.getHeaders().getFirst("Content-Security-Policy")).contains("frame-ancestors 'none'");
+    }
+
+    @Test
     void doesNotExposeTheXsltOrSseFragmentFeaturesFlaggedBySpringAdvisories() {
         assertThat(context.getBeansOfType(org.springframework.web.servlet.view.xslt.XsltView.class)).isEmpty();
         assertThat(context.getBeansOfType(org.springframework.web.servlet.view.xslt.XsltViewResolver.class)).isEmpty();
