@@ -27,6 +27,7 @@ The backend remains on Java 21 and Spring Boot 3. The following compatible secur
 
 | Component | Version |
 | --- | --- |
+| Flyway (PostgreSQL 18 compatibility) | 11.20.3 |
 | Jackson BOM | 2.21.8 |
 | Tomcat | 10.1.61 |
 | PostgreSQL JDBC | 42.7.14 |

@@ -9,7 +9,7 @@ The home page presents a focused selection of 25 countries and territories, publ
 ## Stack
 
 - **Backend:** Java 21, Spring Boot 3, Spring Web, Spring Data JPA, Hibernate, Validation, Spring Cache with Caffeine, Actuator, and Springdoc OpenAPI.
-- **Data:** PostgreSQL 17 and Flyway, with World Bank, IMF, OECD, UNDP, Eurostat, IBGE, BCB, BIS, and NBU adapters and transactional imports.
+- **Data:** PostgreSQL 17 locally and PostgreSQL 18 on Neon, with Flyway, World Bank, IMF, OECD, UNDP, Eurostat, IBGE, BCB, BIS, and NBU adapters and transactional imports.
 - **Frontend:** React, TypeScript, Vite, Tailwind CSS, shadcn/ui, React Router, TanStack Query, Recharts 3, and React Leaflet 5 with Leaflet 1.9.
 - **Runtime:** Docker Compose locally; Cloudflare Pages, Render Docker, and Neon PostgreSQL for the free deployment.
 
@@ -405,7 +405,7 @@ VITE_API_BASE_URL=https://YOUR_SERVICE.onrender.com npm --prefix frontend run bu
 
 Set the actual Render origin without an `/api` suffix. JSON and CSV share this URL. Backend credentials belong only in Render or the ignored local operational environment file; never in `VITE_*` variables. Normal local/Docker builds keep same-origin `/api` requests when `VITE_API_BASE_URL` is unset.
 
-The root `render.yaml` reuses `backend/Dockerfile`, selects the Free plan, and disables automatic deploys. The `render` profile bounds memory-related resources and uses a direct Neon endpoint because import coordination requires session advisory locks. Sleeping services cannot guarantee scheduled imports or continuous availability. Nginx traffic limits from Compose do not apply to the direct Render API.
+The root `render.yaml` reuses `backend/Dockerfile`, selects the Free plan, and disables automatic deploys. The `render` profile bounds memory-related resources and uses a direct Neon endpoint because import coordination requires session advisory locks. Sleeping services cannot guarantee scheduled imports or continuous availability. Nginx traffic limits from Compose do not apply to the direct Render API. The setup guide uses the existing Neon project and includes every supported required/optional environment variable; credentials can be fetched privately with `scripts/configure_neon.py`.
 
 The [self-hosted Compose alternative](docs/deployment-compose.md) and optional manual GHCR workflow remain available. GHCR publication requires successful CI for the exact main commit and manual dispatch; it is not needed when Render builds from the repository. Security and dependency assessments are recorded in the [security reference](docs/security.md).
 
@@ -432,3 +432,5 @@ docs/            Technical architecture, data model, and provider documentation
 ```
 
 Technical references: [API reference](docs/api.md), [architecture](docs/architecture/foundation.md), [data model](docs/data-model.md), [coverage and comparability](docs/data-coverage.md), [World Bank](docs/integrations/world-bank.md), [IMF](docs/integrations/imf.md), [UNDP](docs/integrations/un-development.md), [Eurostat](docs/integrations/eurostat.md), [Brazilian integrations](docs/integrations/brazil.md), and [policy rates](docs/integrations/policy-rates.md).
+
+Agent development tools are described in [Neon tooling](docs/development-tools.md); they are separate from the deployed application's dependencies and configuration.

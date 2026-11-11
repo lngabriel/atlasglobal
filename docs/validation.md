@@ -68,8 +68,8 @@ The fresh-install smoke suite also passed **nine Chrome checks** against the sep
 ## Delivery, security, and operations
 
 - HTTP checks passed for security headers, private management endpoints, gzip, GeoJSON MIME type, versioned-bundle caching, HTML revalidation, and Nginx health. A separate loopback burst test verified HTTP 429 with `Retry-After`, recovery after the limit interval, and rejection of spoofed forwarded-IP identities.
-- The npm audit reported **zero vulnerabilities**. The resolved Java audit checked **91 runtime coordinates**, with **zero unreviewed findings** and two exact, time-limited Spring Web MVC assessments. These are usage-specific findings, not patched library advisories; see [security](security.md) and the required review date of **2026-12-10**.
-- All **seven operational-tool tests** passed: three dependency-audit checks and four remote-backup checks, including incomplete-provider-response rejection, assessment expiry, verified TLS arguments, private output, refusal to overwrite, and partial-dump cleanup. `actionlint` validated the CI and manual image-publication workflows.
+- The npm audit reported **zero vulnerabilities**. The final resolved Java audit checked **90 runtime coordinates**, with **zero unreviewed findings** and two exact, time-limited Spring Web MVC assessments. These are usage-specific findings, not patched library advisories; see [security](security.md) and the required review date of **2026-12-10**.
+- All **fourteen operational-tool tests** passed: three dependency-audit checks, four remote-backup checks, and seven Neon-configuration checks, including incomplete-provider-response rejection, assessment expiry, verified TLS arguments, private output, refusal to overwrite, partial-dump cleanup, organization verification, secret-safe CLI errors, and omitted unallocated CORS origins. `actionlint` validated the CI and manual image-publication workflows.
 - The isolated production stack reached healthy status. Backend/frontend run as non-root users with read-only filesystems and dropped capabilities. Only the loopback frontend port is published; database, backend, and management ports remain private. Provider schedules are disabled by default in this configuration.
 - A fresh-database backup restored with its seeded identity and all five Flyway migrations. A separate backup of the populated local database restored into an isolated verification database with **43,918 annual observations, 111,586 daily policy-rate observations, and 264 world observations**. The source database was not modified by backup or restore.
 
@@ -87,7 +87,13 @@ The static Pages artifact contains **14 files**, with the largest approximately 
 
 Native `scripts/backup.sh --remote` completed with verified TLS and restored into a separate empty database with all five migrations. The populated local application database measured approximately **48 MB** with its existing observations; that is a local PostgreSQL measurement, not Neon's billed storage or an allowance for unlimited future imports. The real remote database has not been created.
 
-The Pages build, delayed-response browser check, and existing suites are configured in CI. Accounts, real credentials, final allocated service names, remote TLS/health/CORS, platform-edge behavior, true cold starts, quotas, and sustained-load memory remain publication checks. No paid service, remote deployment, registry publication, or Git push was performed.
+The existing Neon project and supplied organization were verified through authenticated CLI metadata: PostgreSQL 18 in `aws-sa-east-1`, branch `production`. The direct connection fields were written only to the ignored private backend environment file with mode `600`; local `.env` and global Codex configuration were preserved. A real JDBC connection using certificate/hostname validation and a read-only transaction passed without starting Spring Boot or applying remote migrations.
+
+The full **197-test backend suite passed on each of isolated PostgreSQL 17 and 18**, with no failures, errors, or skipped tests. Flyway was updated within major version 11 to **11.20.3** to remove the old PostgreSQL 18 support warning; existing migration history and JPA/API contracts remained valid on both versions. CI now has both database versions in its backend matrix.
+
+The official Neon and Neon PostgreSQL skills were installed locally for the project, with the upstream license. The project-only MCP configuration was parsed successfully by Codex and contains only a read-only, project-pinned OAuth URL. It does not store an API key; MCP OAuth activation is distinct from the authenticated CLI and occurs on first use after session reload.
+
+The Pages build, delayed-response browser check, and existing suites are configured in CI. Final allocated Pages/Render addresses, deployed health/CORS, platform-edge behavior, true cold starts, quotas, and sustained-load memory remain publication checks. No paid service, remote DDL, remote deployment, registry publication, or Git push was performed.
 
 ## Live imports and database integrity
 
