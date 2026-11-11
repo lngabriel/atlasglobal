@@ -139,11 +139,21 @@ try {
     await call('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', clickCount: 1, ...point })
   }
   async function input(selector, text) {
-    await click(`document.querySelector(${JSON.stringify(selector)})`)
+    // Loading content can move a field between measuring its position and clicking it.
+    // Focus the editable element directly; keyboard input still follows the browser's native event path.
+    await evaluate(`(() => {
+      const element = document.querySelector(${JSON.stringify(selector)});
+      if (!(element instanceof HTMLInputElement) || element.disabled || element.readOnly) throw new Error('Missing or non-editable input');
+      element.scrollIntoView({ block: 'center' });
+      const box = element.getBoundingClientRect();
+      if (!box.width || !box.height || getComputedStyle(element).visibility !== 'visible') throw new Error('Hidden input');
+      element.focus({ preventScroll: true });
+    })()`)
+    await waitFor(`document.activeElement === document.querySelector(${JSON.stringify(selector)})`, `focus on ${selector}`)
     await call('Input.dispatchKeyEvent', { type: 'keyDown', key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65, modifiers: 2, commands: ['selectAll'] })
     await call('Input.dispatchKeyEvent', { type: 'keyUp', key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65, modifiers: 2 })
     await call('Input.insertText', { text })
-    await waitFor(`document.querySelector(${JSON.stringify(selector)})?.value === ${JSON.stringify(text)}`, `typing into ${selector}`)
+    await waitFor(`document.activeElement === document.querySelector(${JSON.stringify(selector)}) && document.querySelector(${JSON.stringify(selector)})?.value === ${JSON.stringify(text)}`, `typing into ${selector}`)
   }
   async function select(selector, value) {
     await evaluate(`(() => { const element = document.querySelector(${JSON.stringify(selector)}); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(element, ${JSON.stringify(value)}); element.dispatchEvent(new Event('change', { bubbles: true })); })()`)
@@ -227,7 +237,7 @@ try {
     await waitFor("document.querySelectorAll('#featured-countries [data-country]').length === 25")
     pass('the public home directory renders all selected country links without seeded observations')
     await input('#home-country-query', 'Brasil')
-    await waitFor("document.querySelectorAll('#featured-countries [data-country]').length === 1")
+    await waitFor("new URLSearchParams(location.search).get('q') === 'Brasil' && document.querySelectorAll('#featured-countries [data-country]').length === 1 && document.querySelector('#featured-countries [data-country]')?.dataset.country === 'BRA'")
     pass('country search works on a newly migrated application')
     await navigate('/paises/TWN')
     await waitFor("document.querySelector('article')?.textContent.includes('Taiwan') && !document.body.innerText.includes('Carregando indicadores')")

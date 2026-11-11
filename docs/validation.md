@@ -135,6 +135,14 @@ The frontend's 76 unit tests and both production/Pages builds passed with the ne
 
 The old GitHub run for `d87735a` failed in `test:smoke` after its Docker stack and API started. Its detailed log was unavailable through the current credentials; the original failure cause remains unconfirmed. A fresh, isolated Docker reproduction passed all nine smoke checks, all three delayed-start checks, and HTTP/security/compression/Actuator checks, including rate-limit blocking and recovery. The temporary stack was removed afterward. CI now retains per-stage failure screenshots and both Compose service logs for seven days; `actionlint`, all 14 operational Python tests, and whitespace validation passed. The previous run's red status is historical and independent of current deployment health.
 
+## CI search interaction regression
+
+A subsequent runtime log on **2026-11-11** identified a timeout while typing into `#home-country-query`. A controlled Chrome reproduction against a newly migrated database established the interaction failure: the helper measured the input's click coordinates while the overview was loading, but the completed empty overview moved the input upward by 30 pixels before the mouse event. The cached click missed the field, leaving the page body focused and the search value and URL unchanged. The historical helper reproduced the same timeout.
+
+The typing helper now checks that its target is visible and editable, focuses the element directly, and verifies focus before sending native browser keyboard/text events. It also checks the resulting value and retained focus. The smoke assertion verifies the URL query and the matching Brazil entry. Application search behavior and timeouts are unchanged.
+
+The actual patched helper passed the controlled reproduction: `Brasil`, `?q=Brasil`, one matching country, and focus retained. All **76 frontend unit tests** and **79 full Chrome checks** passed, including existing mouse navigation, period entry, and mobile focus coverage. Five consecutive smoke runs against the isolated fresh database passed all nine checks each, followed by three delayed-start checks and HTTP/security/rate-limit checks. JavaScript syntax, workflow lint, and whitespace checks also passed.
+
 ## Local live imports and database integrity
 
 The application database contains completed World Bank and OECD imports. Both new national commands also completed with exit code 0 and persisted `COMPLETED` execution records. Read-only database checks found:
