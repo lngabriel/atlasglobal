@@ -190,6 +190,17 @@ docker run --rm --env-file infrastructure/free-tier/backend.env \
 
 The World Bank command populates supported country metadata and observations. Run the other one-shot commands from the [README](../README.md#import-world-bank-data) with the same `docker run --rm --env-file ... IMAGE` prefix. Use one import command per process, preserve source-specific definitions, and bound countries/years to the desired scope. Local CLI containers can have more memory than the free web service and write directly to Neon while Render sleeps. No HTTP import endpoint is needed.
 
+Annual imports do not populate dated policy rates. After the country catalog exists, load their history separately:
+
+```bash
+docker run --rm --env-file infrastructure/free-tier/backend.env \
+  atlas-global-backend:local \
+  --spring.main.web-application-type=none \
+  --atlas.policy-rates.run-once=true
+```
+
+This uses the existing BCB, BIS, and NBU adapters, from `2010-01-01` through the current UTC date. Back up the database first, inspect the exit status and source import audits, and verify `/api/v1/policy-rates?countries=BRA,USA` and `/juros`. An HTTP 200 response with no imported series indicates an empty rate dataset, not an unavailable database. The [policy-rate integration reference](integrations/policy-rates.md#import-and-refresh) documents bounded intervals, provider-specific retries, coverage gaps, and the distinction between daily observations and source publication dates.
+
 Refreshes are manual in this setup. A local OS scheduler can run the commands while the operator's machine is awake; that is not a platform-provided scheduler. Do not promise daily refreshes from a sleeping Render process. Monitor import audit outcomes and retain source/reference-date disclosures.
 
 ## 6. Backup and restoration

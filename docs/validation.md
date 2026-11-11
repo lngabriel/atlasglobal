@@ -112,9 +112,28 @@ The first attempt recorded an upstream HTTP 502 failure after importing catalog 
 | Import audits | 2: one failed attempt and one completed import |
 | Successful Flyway migrations | 5, unchanged |
 
-The observation scope is the 24 WDI-supported home countries, requested from 1960 through the current year. Source coverage determines the actual available periods; Taiwan remains in the catalog without fabricated WDI observations. OECD, IMF, UNDP, Eurostat, national Brazilian series, and daily policy rates were not included in this authorization and remain pending their separate production imports. The larger multi-provider dataset described below is the local validation database.
+The observation scope is the 24 WDI-supported home countries, requested from 1960 through the current year. Source coverage determines the actual available periods; Taiwan remains in the catalog without fabricated WDI observations. OECD, IMF, UNDP, Eurostat, and annual national Brazilian series remain pending their separate production imports. Daily policy rates were loaded separately as documented below. The larger multi-provider dataset described later is the local validation database.
 
 Nine live Chrome checks passed against the real Pages/Render endpoints: home highlights matched actual world values, years, and sources; Brazil search/profile/chart/table and CSV matched the API; Brazil/USA comparison used the same series and common year; 768/390-pixel layouts had no horizontal overflow; API requests targeted Render directly; and no JavaScript exceptions, CSP violations, or unexpected API errors occurred. Direct checks confirmed HTTP 200 for Brazil, 218 catalog entries, and four populated world highlights with the exact Pages CORS origin. The ignored private operational file was updated to that verified origin without changing credentials.
+
+## Production policy-rate initialization and runtime recheck
+
+On **2026-11-11**, the live policy-rate API returned HTTP 200 but no imported series for Brazil or the United States. Read-only Neon checks confirmed zero policy-rate series and observations. After a new private backup and successful archive verification, the existing one-shot importer loaded BCB, BIS, and NBU data for the 24 configured country codes from `2010-01-01` through `2026-11-11`. The process exited successfully and all three source audits were `COMPLETED`. Flyway was disabled for this operation because the five migrations had already been verified; no schema changes or application deployments occurred.
+
+| Production policy-rate source | Series | Observations | Latest native observation date |
+| --- | ---: | ---: | --- |
+| BCB, SGS 432 | 1 | 6,159 | 2026-11-11 |
+| BIS, WS_CBPOL | 18 | 99,270 | 2026-11-03 |
+| NBU, policy rate | 1 | 6,159 | 2026-11-11 |
+| Total | 20 | 111,588 | Source-specific dates retained |
+
+The dataset has 101,691 numeric observations and 9,897 explicitly missing cells, with no duplicate series/date keys, future dates, or invented statistical revision dates. The 218 catalog entries, 24 annual indicator definitions, 38,016 country observations, 264 world observations, and five successful migrations are unchanged. Brazil's latest published target was 13.75% per year on `2026-11-11`; the US BIS instrument was 3.875% on `2026-11-03`. These are verified snapshot values, not application constants. Argentina retains its discontinued history; unsupported countries remain explicitly unavailable.
+
+**Ten live Chrome checks passed** on `/juros`: latest values, dates, source and collection metadata matched the API; chart/table and every exported CSV observation matched the selected daily history; five-year and custom date filters worked; adding Ukraine selected NBU and removing countries updated the comparison; missing Singapore/Taiwan rates and discontinued Argentine history retained their notices. Tablet/mobile checks at 768 and 390 pixels had no horizontal overflow, JavaScript exceptions, CSP violations, or unexpected API errors. Requests used the actual Render origin.
+
+The frontend's 76 unit tests and both production/Pages builds passed with the new SVG globe favicon. Its 16-, 32-, and 64-pixel rendering was visually checked on light and dark backgrounds. Publishing that asset requires the normal frontend update process.
+
+The old GitHub run for `d87735a` failed in `test:smoke` after its Docker stack and API started. Its detailed log was unavailable through the current credentials; the original failure cause remains unconfirmed. A fresh, isolated Docker reproduction passed all nine smoke checks, all three delayed-start checks, and HTTP/security/compression/Actuator checks, including rate-limit blocking and recovery. The temporary stack was removed afterward. CI now retains per-stage failure screenshots and both Compose service logs for seven days; `actionlint`, all 14 operational Python tests, and whitespace validation passed. The previous run's red status is historical and independent of current deployment health.
 
 ## Local live imports and database integrity
 
