@@ -73,7 +73,7 @@ The fresh-install smoke suite also passed **nine Chrome checks** against the sep
 - The isolated production stack reached healthy status. Backend/frontend run as non-root users with read-only filesystems and dropped capabilities. Only the loopback frontend port is published; database, backend, and management ports remain private. Provider schedules are disabled by default in this configuration.
 - A fresh-database backup restored with its seeded identity and all five Flyway migrations. A separate backup of the populated local database restored into an isolated verification database with **43,918 annual observations, 111,586 daily policy-rate observations, and 264 world observations**. The source database was not modified by backup or restore.
 
-CI and manual GHCR publication are configured and locally validated. No GitHub workflow was executed remotely, images were not published, and no public deployment was performed. See [deployment and recovery instructions](deployment.md).
+CI and manual GHCR publication are configured and locally validated. The checks above did not publish images or execute a remote deployment. Later operator-led publication and live data verification are recorded below. See [deployment and recovery instructions](deployment.md).
 
 ## Free deployment preparation
 
@@ -85,7 +85,7 @@ With the Blueprint JVM settings, a **512 MiB memory / 0.1 CPU** container starte
 
 The static Pages artifact contains **14 files**, with the largest approximately **466 KB**, below the checked Pages file-count/size limits. It passed **nine cross-origin Chrome smoke checks** through local HTTPS endpoints, generated CSP headers, and the constrained backend, including direct profile/map routes and responsive widths. Another **three Chrome checks**, run against both deployment modes, paused a real API request for over ten seconds, verified the startup notice with a usable country directory, resumed the request, and confirmed recovery without fabricated data, JavaScript exceptions, CSP violations, or unexpected API errors. Local hostname mapping and test-edge certificate bypass were confined to the browser fixture; JDBC certificate verification remained enabled.
 
-Native `scripts/backup.sh --remote` completed with verified TLS and restored into a separate empty database with all five migrations. The populated local application database measured approximately **48 MB** with its existing observations; that is a local PostgreSQL measurement, not Neon's billed storage or an allowance for unlimited future imports. The real remote database has not been created.
+Native `scripts/backup.sh --remote` completed with verified TLS and restored into a separate empty database with all five migrations. The populated local application database measured approximately **48 MB** with its existing observations; that is a local PostgreSQL measurement, not Neon's billed storage or an allowance for unlimited future imports. The deployment uses the existing Neon project rather than provisioning a replacement database.
 
 The existing Neon project and supplied organization were verified through authenticated CLI metadata: PostgreSQL 18 in `aws-sa-east-1`, branch `production`. The direct connection fields were written only to the ignored private backend environment file with mode `600`; local `.env` and global Codex configuration were preserved. A real JDBC connection using certificate/hostname validation and a read-only transaction passed without starting Spring Boot or applying remote migrations.
 
@@ -93,9 +93,30 @@ The full **197-test backend suite passed on each of isolated PostgreSQL 17 and 1
 
 The official Neon and Neon PostgreSQL skills were installed locally for the project, with the upstream license. The project-only MCP configuration was parsed successfully by Codex and contains only a read-only, project-pinned OAuth URL. It does not store an API key; MCP OAuth activation is distinct from the authenticated CLI and occurs on first use after session reload.
 
-The Pages build, delayed-response browser check, and existing suites are configured in CI. Final allocated Pages/Render addresses, deployed health/CORS, platform-edge behavior, true cold starts, quotas, and sustained-load memory remain publication checks. No paid service, remote DDL, remote deployment, registry publication, or Git push was performed.
+The Pages build, delayed-response browser check, and existing suites are configured in CI. No paid service, remote DDL, remote deployment, registry publication, or Git push was performed by the preparation workflow. The operator later published the services manually; true cold starts, quotas, and sustained-load memory remain operational checks.
 
-## Live imports and database integrity
+## Production data initialization
+
+The manually published frontend is [atlasglobalweb.pages.dev](https://atlasglobalweb.pages.dev), with the API at [atlasglobal.onrender.com](https://atlasglobal.onrender.com). Initial read-only diagnostics found five successful migrations, only the seeded Taiwan catalog entry, no indicators/observations, and no import executions. The deployed API accepted the exact Pages CORS origin; Brazil returned HTTP 404 because it was absent from the catalog.
+
+After explicit approval, the existing World Bank command ran locally against the direct Neon TLS endpoint. A private custom-format backup was created and its archive listing verified first. Remote Flyway execution was disabled for this command because the five migrations were already applied. No new table, database replacement, HTTP import endpoint, application deployment, or Git push was involved.
+
+The first attempt recorded an upstream HTTP 502 failure after importing catalog metadata. The existing idempotent command then completed with bounded retries, preserving both audit outcomes. Read-only database checks found:
+
+| Production records | Count |
+| --- | ---: |
+| Countries and territories | 218 |
+| WDI indicators / source-specific series | 24 / 24 |
+| Country observations, including explicit missing cells | 38,016 |
+| Separate published world observations | 264 |
+| Import audits | 2: one failed attempt and one completed import |
+| Successful Flyway migrations | 5, unchanged |
+
+The observation scope is the 24 WDI-supported home countries, requested from 1960 through the current year. Source coverage determines the actual available periods; Taiwan remains in the catalog without fabricated WDI observations. OECD, IMF, UNDP, Eurostat, national Brazilian series, and daily policy rates were not included in this authorization and remain pending their separate production imports. The larger multi-provider dataset described below is the local validation database.
+
+Nine live Chrome checks passed against the real Pages/Render endpoints: home highlights matched actual world values, years, and sources; Brazil search/profile/chart/table and CSV matched the API; Brazil/USA comparison used the same series and common year; 768/390-pixel layouts had no horizontal overflow; API requests targeted Render directly; and no JavaScript exceptions, CSP violations, or unexpected API errors occurred. Direct checks confirmed HTTP 200 for Brazil, 218 catalog entries, and four populated world highlights with the exact Pages CORS origin. The ignored private operational file was updated to that verified origin without changing credentials.
+
+## Local live imports and database integrity
 
 The application database contains completed World Bank and OECD imports. Both new national commands also completed with exit code 0 and persisted `COMPLETED` execution records. Read-only database checks found:
 

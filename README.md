@@ -1,6 +1,6 @@
 # Atlas Global
 
-[GitHub](https://github.com/lngabriel/atlasglobal)
+[Live site](https://atlasglobalweb.pages.dev) · [GitHub](https://github.com/lngabriel/atlasglobal)
 
 Atlas Global is an open-source platform for exploring public international data. Its backend imports World Bank, IMF, OECD, UNDP, and Eurostat statistics, complemented by national series from IBGE and Banco Central do Brasil, into PostgreSQL. Dated policy rates use official BCB, BIS, and National Bank of Ukraine sources. Each series preserves its definition, unit, publication edition, reference period, provenance, and missing values. Official projections and provisional values are identified explicitly. Access is public and free, without accounts or authentication.
 

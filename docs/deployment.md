@@ -1,6 +1,6 @@
 # Deployment: Cloudflare Pages, Render, and Neon
 
-The free deployment uses Cloudflare Pages for static React assets, a Render Free Docker web service for Spring Boot, and Neon Free PostgreSQL. The initial address is `https://YOUR_PROJECT.pages.dev`; Render supplies a separate `https://YOUR_SERVICE.onrender.com` API address. Both platforms manage HTTPS certificates. Replace these illustrative names with addresses allocated to your accounts.
+The free deployment uses Cloudflare Pages for static React assets, a Render Free Docker web service for Spring Boot, and Neon Free PostgreSQL. The live frontend is [atlasglobalweb.pages.dev](https://atlasglobalweb.pages.dev), and its API origin is [atlasglobal.onrender.com](https://atlasglobal.onrender.com). Both platforms manage HTTPS certificates. Replace these addresses when deploying a separate environment.
 
 These files are preparation templates. Local validation does not create accounts or services, publish images, deploy remotely, or push Git commits. Importing a Blueprint or connecting a deployment integration later can create resources immediately; do so only when ready to publish.
 
@@ -17,15 +17,15 @@ The [self-hosted Compose alternative](deployment-compose.md) remains available. 
 
 Choose the **Free** plan on all three platforms, a Render/Neon region pair with low latency, and a unique Pages project name. Keep automatic deployments and previews disabled initially. No custom domain, paid cron, persistent Render disk, paid database, or Pages Function is required. If the allocated Pages name changes, update the exact backend CORS origin before publishing.
 
-A purchased domain is unnecessary: Pages allocates `https://<assigned-project>.pages.dev` and manages its TLS certificate. Render separately allocates `https://<assigned-service>.onrender.com`. These addresses have not been allocated/verified for this repository yet; do not treat illustrative names as deployed URLs. The repository is [lngabriel/atlasglobal](https://github.com/lngabriel/atlasglobal).
+A purchased domain is unnecessary: Pages allocates a `pages.dev` address and manages its TLS certificate; Render supplies a separate `onrender.com` address. The services below were published manually and subsequently verified through their public endpoints and browser flows. The repository is [lngabriel/atlasglobal](https://github.com/lngabriel/atlasglobal).
 
 | Address | Status / purpose |
 | --- | --- |
 | [Neon project console](https://console.neon.tech/app/projects/silent-cherry-24123415/) | Existing verified project. |
-| `https://<assigned-project>.pages.dev` | Frontend and exact backend CORS origin, pending Pages project allocation. |
-| `https://<assigned-service>.onrender.com` | API origin for `VITE_API_BASE_URL`, pending Render service allocation. |
-| `https://<assigned-service>.onrender.com/healthz` | Minimal platform readiness probe after deployment. |
-| `https://<assigned-service>.onrender.com/api/docs` | Public API documentation after deployment. |
+| `https://atlasglobalweb.pages.dev` | Live frontend and exact backend CORS origin. |
+| `https://atlasglobal.onrender.com` | Live API origin for `VITE_API_BASE_URL`. |
+| `https://atlasglobal.onrender.com/healthz` | Minimal platform readiness probe. |
+| `https://atlasglobal.onrender.com/api/docs` | Public API documentation. |
 
 ## 2. Neon PostgreSQL
 
@@ -42,12 +42,13 @@ After authenticating the official CLI, fetch the required private backend fields
 ```bash
 python3 scripts/configure_neon.py \
   --project-id silent-cherry-24123415 \
-  --org-id org-frosty-boat-57690161
+  --org-id org-frosty-boat-57690161 \
+  --frontend-origin https://atlasglobalweb.pages.dev
 ```
 
 The helper verifies organization ownership, requests the direct read/write endpoint with `verify-full`, and creates `infrastructure/free-tier/backend.env` atomically with mode `600`. It refuses existing files and non-ignored destinations. It does not change database data or print credentials. `--neon-cli` and `--config-dir` select an isolated CLI installation/profile directory; `--branch-id`, `--database-name`, and `--role-name` select an existing resource when needed.
 
-If the Pages address is already allocated, pass `--frontend-origin https://YOUR_PROJECT.pages.dev`. Otherwise the helper deliberately omits CORS; add the exact allocated origin privately before starting the backend. It never invents a production address. A real JDBC read-only connection has been verified, but no remote schema migration or application deployment has been performed.
+For a separate environment whose Pages address is not allocated yet, omit `--frontend-origin`; the helper deliberately leaves CORS unset until the exact origin is available. The current private operational file includes the verified production Pages origin. A real JDBC read-only connection was verified before publication. The initial production dataset was later imported with explicit approval, using the existing schema and no remote migrations.
 
 Atlas uses session-level PostgreSQL advisory locks to coordinate imports. Transaction pooling does not preserve those locks, so a small direct connection pool is used for the application, Flyway, imports, and backup/restore. See [Neon pooling limitations](https://neon.com/docs/connect/connection-pooling).
 
@@ -92,7 +93,7 @@ Enter these **backend-only** environment variables privately in Render:
 | `DB_NAME` | Existing Neon database name. | Private Neon connection fields. |
 | `DB_USERNAME` | Existing Neon role. | Private Neon connection fields. |
 | `DB_PASSWORD` | Actual password entered privately in the dashboard. | Neon secret; never versioned. |
-| `CORS_ALLOWED_ORIGINS` | Exactly `https://YOUR_PROJECT.pages.dev`; no trailing slash, wildcard, preview, port, or path. | Allocated Cloudflare Pages production URL. |
+| `CORS_ALLOWED_ORIGINS` | Exactly `https://atlasglobalweb.pages.dev`; no trailing slash, wildcard, preview, port, or path. | Verified Cloudflare Pages production URL. |
 | `JAVA_TOOL_OPTIONS` | Recommended bounded JVM settings below; Blueprint supplies them. | Repository / JVM. |
 | `PORT` | Supplied automatically by Render; fallback `10000`. Do not set a host Compose port. | Render platform. |
 
@@ -161,7 +162,7 @@ The [official Cloudflare agent setup prompt](https://developers.cloudflare.com/a
 | Build output directory | `dist` |
 | `NODE_VERSION` | `22.23.4` |
 | `SKIP_DEPENDENCY_INSTALL` | `1`; the build command runs reproducible `npm ci`. |
-| `VITE_API_BASE_URL` | Exact HTTPS Render **origin**, e.g. `https://YOUR_SERVICE.onrender.com`; no `/api` suffix. |
+| `VITE_API_BASE_URL` | `https://atlasglobal.onrender.com`; exact HTTPS API origin without an `/api` suffix. |
 | `VITE_API_TIMEOUT_MS` | Optional, default `90000` externally; range `15000`–`120000`. |
 
 All `VITE_*` values are public build inputs. Put **no** passwords, tokens, private database URLs, or backend environment files in Pages. The API setting is only its public origin. Changing the origin/timeout requires a new frontend build. `build:pages` rejects an absent or invalid API origin; normal `npm run build` preserves same-origin local/Docker behavior when `VITE_API_BASE_URL` is unset.
@@ -246,4 +247,4 @@ These official limits were reviewed on **2026-11-10** and can change. Recheck da
 | [Render](https://render.com/docs/free) / [compute](https://render.com/docs/compute-plans) | 512 MB / 0.1 CPU; fifteen-minute idle sleep; roughly one-minute resume; 750 instance-hours/workspace/month. No free shell, one-off jobs, persistent disk, or always-on guarantee. Separate bandwidth/build allowances and external-database/API traffic restrictions apply. | Bounded JVM, startup-aware UI, local operations. Review spending controls and avoid paid overages. |
 | [Neon](https://neon.com/docs/introduction/plans) | 1 GB PostgreSQL storage/project; 100 CU-hours/project/month; 5 GB public transfer/project/month; mandatory five-minute idle suspension; instant restore up to six hours / 1 GB changes. | Small direct pool, bounded imports, independent backups; no paid scheduled snapshots or SLA assumed. |
 
-Local validation covers PostgreSQL 18 migrations/JPA/API tests, builds, certificate/hostname enforcement with an isolated authority, CORS, health, constrained-container startup, and application flows. A real JDBC connection to the existing Neon project was verified with hostname/certificate validation and a read-only transaction; no remote DDL was executed. Pages/Render allocated addresses, platform-edge behavior, true Render cold starts, provider egress eligibility, account quotas, and sustained production memory remain publication checks. No remote deployment is claimed.
+Local validation covers PostgreSQL 18 migrations/JPA/API tests, builds, certificate/hostname enforcement with an isolated authority, CORS, health, constrained-container startup, and application flows. The live API and actual Pages origin also passed read-only checks after the approved initial World Bank import: Brazil now exists, all four world highlights have observations, and nine Chrome checks covered profiles, histories, CSV, comparison, and responsive layouts. The import changed data only, retained the five existing successful migrations, and did not trigger a remote deployment or Git push. True cold-start behavior, account quotas, and sustained production load still require operational observation. See [validation results](validation.md).
